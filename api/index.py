@@ -288,3 +288,115 @@ async def create_ficha_docente(ficha: Dict[str, Any]):
         return success_response(response.data[0], "Ficha docente creada exitosamente")
     except Exception as e:
         return handle_exception(e, "crear ficha docente")
+
+# ============== ENDPOINTS PARA ASISTENCIAS A ACTIVIDADES ==============
+
+@app.get("/api/asistencias-actividades")
+async def get_asistencias_actividades():
+    """Obtiene todas las asistencias a actividades."""
+    try:
+        supabase = get_supabase_client()
+        if not supabase:
+            return error_response("Supabase no inicializado", "No se pudo conectar a Supabase")
+        
+        response = supabase.table("asistencias_actividades").select("*").execute()
+        return success_response(response.data, "Asistencias a actividades obtenidas exitosamente")
+    except Exception as e:
+        return handle_exception(e, "obtener asistencias a actividades")
+
+@app.post("/api/asistencias-actividades")
+async def create_asistencia_actividad(asistencia: Dict[str, Any]):
+    """Crea una nueva asistencia a actividad."""
+    try:
+        supabase = get_supabase_client()
+        if not supabase:
+            return error_response("Supabase no inicializado", "No se pudo conectar a Supabase")
+        
+        # Manejar el campo estudiante_programa_academico_academico
+        if "estudiante_programa_academico_academico" in asistencia:
+            # Asegurarse de que también exista el campo estudiante_programa_academico
+            asistencia["estudiante_programa_academico"] = asistencia["estudiante_programa_academico_academico"]
+        
+        # Buscar estudiante por número de documento si está disponible
+        if "numero_documento" in asistencia and "estudiante_id" not in asistencia:
+            estudiante = supabase.table("estudiantes").select("id").eq("documento", asistencia["numero_documento"]).execute()
+            if estudiante.data and len(estudiante.data) > 0:
+                asistencia["estudiante_id"] = estudiante.data[0]["id"]
+            else:
+                # Si no se encuentra el estudiante, establecer estudiante_id como NULL
+                asistencia["estudiante_id"] = None
+        
+        # Generar un ID para la asistencia si no tiene uno
+        if "id" not in asistencia or not asistencia["id"]:
+            asistencia["id"] = str(uuid.uuid4())
+        
+        # Añadir timestamps si no están presentes
+        if "created_at" not in asistencia:
+            asistencia["created_at"] = datetime.now().isoformat()
+        
+        # Insertar la asistencia en la base de datos
+        response = supabase.table("asistencias_actividades").insert(asistencia).execute()
+        
+        if not response.data:
+            return error_response("No se pudo crear la asistencia", "Error al insertar en la base de datos")
+        
+        return success_response(response.data[0], "Asistencia a actividad creada exitosamente")
+    except Exception as e:
+        return handle_exception(e, "crear asistencia a actividad")
+
+# ============== ENDPOINTS PARA SERVICIOS ==============
+
+@app.get("/api/servicios")
+async def get_servicios():
+    """Obtiene todos los servicios."""
+    try:
+        supabase = get_supabase_client()
+        if not supabase:
+            return error_response("Supabase no inicializado", "No se pudo conectar a Supabase")
+        
+        response = supabase.table("servicios").select("*").execute()
+        return success_response(response.data, "Servicios obtenidos exitosamente")
+    except Exception as e:
+        return handle_exception(e, "obtener servicios")
+
+@app.get("/api/servicios/{id}")
+async def get_servicio(id: str):
+    """Obtiene un servicio por su ID."""
+    try:
+        supabase = get_supabase_client()
+        if not supabase:
+            return error_response("Supabase no inicializado", "No se pudo conectar a Supabase")
+        
+        response = supabase.table("servicios").select("*").eq("id", id).execute()
+        if not response.data:
+            return error_response(f"Servicio con ID {id} no encontrado", "Servicio no encontrado", 404)
+        
+        return success_response(response.data[0], "Servicio obtenido exitosamente")
+    except Exception as e:
+        return handle_exception(e, "obtener servicio")
+
+@app.post("/api/servicios")
+async def create_servicio(servicio: Dict[str, Any]):
+    """Crea un nuevo servicio."""
+    try:
+        supabase = get_supabase_client()
+        if not supabase:
+            return error_response("Supabase no inicializado", "No se pudo conectar a Supabase")
+        
+        # Generar un ID para el servicio si no tiene uno
+        if "id" not in servicio or not servicio["id"]:
+            servicio["id"] = str(uuid.uuid4())
+        
+        # Añadir timestamps si no están presentes
+        if "created_at" not in servicio:
+            servicio["created_at"] = datetime.now().isoformat()
+        
+        # Insertar el servicio en la base de datos
+        response = supabase.table("servicios").insert(servicio).execute()
+        
+        if not response.data:
+            return error_response("No se pudo crear el servicio", "Error al insertar en la base de datos")
+        
+        return success_response(response.data[0], "Servicio creado exitosamente")
+    except Exception as e:
+        return handle_exception(e, "crear servicio")
