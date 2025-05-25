@@ -1,11 +1,7 @@
-"""Módulo de configuración para la aplicación.
-Proporciona acceso a la configuración de la base de datos y otras configuraciones.
-"""
-
 import os
 from dotenv import load_dotenv
 
-# Cargar variables de entorno
+# Cargar variables de entorno desde .env
 load_dotenv()
 
 # Configuración de la aplicación
@@ -29,15 +25,3 @@ CORS_HEADERS = ["*"]
 
 # Otras configuraciones
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
-
-# Importar supabase desde database.py
-from .database import supabase
-
-__all__ = [
-    'supabase',
-    'APP_NAME', 'APP_VERSION', 'APP_DESCRIPTION', 'DEBUG',
-    'SUPABASE_URL', 'SUPABASE_KEY',
-    'HOST', 'PORT',
-    'CORS_ORIGINS', 'CORS_METHODS', 'CORS_HEADERS',
-    'UPLOAD_FOLDER'
-]
