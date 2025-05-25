@@ -1,64 +1,56 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import RedirectResponse
+import os
 
-from config import supabase
+# Importar configuración
+try:
+    from config import (
+        APP_NAME, APP_VERSION, APP_DESCRIPTION,
+        HOST, PORT,
+        CORS_ORIGINS, CORS_METHODS, CORS_HEADERS
+    )
+except ImportError:
+    # Valores predeterminados para Vercel
+    APP_NAME = "API Sistema de Permanencia UPC"
+    APP_VERSION = "1.0.0"
+    APP_DESCRIPTION = "API para el Sistema de Permanencia de la Universidad Popular del Cesar"
+    HOST = "0.0.0.0"
+    PORT = int(os.environ.get("PORT", 8000))
+    CORS_ORIGINS = ["*"]
+    CORS_METHODS = ["*"]
+    CORS_HEADERS = ["*"]
+
+# Importar rutas
 from routes.usuarios import router as usuarios_router
 from routes.programas import router as programas_router
-from routes.estudiantes import router as estudiantes_router
-from routes.servicios import router as servicios_router
+from routes.estudiantes_modular import router as estudiantes_router
+from routes.servicios_modular import router as servicios_router
 from routes.estadisticas import router as estadisticas_router
 from routes.uploads import router as uploads_router
 from routes.actas import router as actas_router
-from routes.permanencia import router as permanencia_router
+from routes.permanencia_modular import router as permanencia_router
 
 # Inicializar FastAPI
 app = FastAPI(
-    title="API Sistema de Permanencia UPC",
-    description="API para el Sistema de Información de la Unidad de Permanencia de la Universidad Popular del Cesar. Esta API permite gestionar todos los servicios de permanencia estudiantil, incluyendo tutorías académicas, apoyo psicológico, talleres formativos, seguimiento académico y comedor universitario.",
-    version="1.0.0",
-    docs_url=None,  # Desactivamos la URL de docs predeterminada para personalizarla
+    title=APP_NAME,
+    description=APP_DESCRIPTION,
+    version=APP_VERSION,
+    docs_url="/docs",
     redoc_url="/redoc",
-    openapi_url="/openapi.json",
-    contact={
-        "name": "Universidad Popular del Cesar",
-        "url": "https://www.unicesar.edu.co",
-        "email": "permanencia@unicesar.edu.co"
-    },
-    license_info={
-        "name": "Uso interno - UPC",
-        "url": "https://www.unicesar.edu.co/licencia"
-    },
-    terms_of_service="https://www.unicesar.edu.co/terminos"
+    openapi_url="/openapi.json"
 )
 
-# Configurar CORS
+# Configuración CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=CORS_METHODS,
+    allow_headers=CORS_HEADERS,
 )
 
-# Ruta raíz que redirecciona a la documentación
-@app.get("/", include_in_schema=False)
-async def root():
-    return RedirectResponse(url="/docs")
-
-# Personalizar documentación Swagger
-@app.get("/docs", include_in_schema=False)
-async def custom_swagger_ui_html():
-    return get_swagger_ui_html(
-        openapi_url=app.openapi_url,
-        title=f"{app.title} - Documentación API",
-        oauth2_redirect_url=app.swagger_ui_oauth2_redirect_url,
-        swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
-        swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
-    )
-
+# Personalización de la documentación OpenAPI
 @app.get("/openapi.json", include_in_schema=False)
 async def get_open_api_endpoint():
     return get_openapi(
@@ -78,6 +70,20 @@ app.include_router(uploads_router, prefix="/api", tags=["Importación de Datos"]
 app.include_router(actas_router, prefix="/api", tags=["Actas"])
 app.include_router(permanencia_router, prefix="/api", tags=["Servicios de Permanencia"])
 
+# Ruta raíz
+@app.get("/", tags=["Root"])
+async def root():
+    return {
+        "message": "Bienvenido a la API del Sistema de Permanencia de la UPC",
+        "version": app.version,
+        "documentation": "/docs",
+        "redoc": "/redoc"
+    }
+
+# Para Vercel
+handler = app
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8001)
+    print(f"Iniciando servidor en {HOST}:{PORT}...")
+    uvicorn.run("main:app", host=HOST, port=PORT, reload=True)

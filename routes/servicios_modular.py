@@ -265,31 +265,71 @@ async def get_software_solicitud(id: str):
            description="Registra una nueva solicitud de software",
            response_model=Dict[str, Any],
            tags=["Software Solicitudes"])
-async def create_software_solicitud(datos: Dict[str, Any]):
+async def create_software_solicitud(solicitud: Dict[str, Any]):
     """Crea una nueva solicitud de software."""
     try:
         from config import supabase
         
-        # Validar campos requeridos
-        if not datos.get("nombre_software"):
-            return error_response("El nombre del software es obligatorio", "El nombre del software es obligatorio")
+        # Añadir valores por defecto para campos requeridos si no están presentes
+        if "nombre_proyecto" not in solicitud or not solicitud["nombre_proyecto"]:
+            # Usar nombre_asignatura como nombre_proyecto si está disponible
+            if "nombre_asignatura" in solicitud and solicitud["nombre_asignatura"]:
+                solicitud["nombre_proyecto"] = f"Proyecto {solicitud['nombre_asignatura']}"
+            else:
+                solicitud["nombre_proyecto"] = "Proyecto de Software"
+        
+        # Añadir estado por defecto si no está presente
+        if "estado" not in solicitud or not solicitud["estado"]:
+            solicitud["estado"] = "Pendiente"
             
-        if not datos.get("descripcion"):
-            return error_response("La descripción es obligatoria", "La descripción es obligatoria")
-            
-        if not datos.get("justificacion"):
-            return error_response("La justificación es obligatoria", "La justificación es obligatoria")
+        # Añadir fecha de solicitud si no está presente
+        if "fecha_solicitud" not in solicitud or not solicitud["fecha_solicitud"]:
+            from datetime import datetime
+            solicitud["fecha_solicitud"] = datetime.now().isoformat()
         
-        # Añadir timestamps
-        datos["created_at"] = datetime.now().isoformat()
-        datos["updated_at"] = datetime.now().isoformat()
+        # Buscar programa_id si tenemos estudiante_programa_academico pero no programa_id
+        if ("estudiante_programa_academico" in solicitud and 
+            solicitud["estudiante_programa_academico"] and 
+            "programa_id" not in solicitud):
+            programa = supabase.table("programas").select("id").eq("nombre", solicitud["estudiante_programa_academico"]).execute()
+            if programa.data and len(programa.data) > 0:
+                solicitud["programa_id"] = programa.data[0]["id"]
         
-        # Crear solicitud
-        response = supabase.table("software_solicitudes").insert(datos).execute()
+        # Añadir timestamps si no están presentes
+        if "created_at" not in solicitud:
+            from datetime import datetime
+            solicitud["created_at"] = datetime.now().isoformat()
+        if "updated_at" not in solicitud:
+            from datetime import datetime
+            solicitud["updated_at"] = datetime.now().isoformat()
         
-        return success_response(response.data[0], "Solicitud de software registrada exitosamente")
+        # Filtrar los campos que existen en la tabla para evitar errores
+        campos_validos = [
+            "id", "estudiante_id", "programa_id", "usuario_id", "docente_tutor", 
+            "facultad", "estudiante_programa_academico", "nombre_asignatura", 
+            "nombre_proyecto", "descripcion", "estado", "fecha_solicitud", 
+            "fecha_aprobacion", "observaciones", "created_at", "updated_at",
+            "nombre_software", "justificacion", "version", "url_descarga"
+        ]
+        
+        # Filtrar solo los campos válidos
+        solicitud_filtrada = {k: v for k, v in solicitud.items() if k in campos_validos}
+        
+        # Imprimir para depuración
+        print(f"Solicitud original: {solicitud}")
+        print(f"Solicitud filtrada: {solicitud_filtrada}")
+        
+        # Insertar la solicitud filtrada
+        response = supabase.table("software_solicitudes").insert(solicitud_filtrada).execute()
+        return response.data[0]
     except Exception as e:
-        return handle_exception(e, "crear solicitud de software")
+        print(f"Error al crear solicitud de software: {e}")
+        # Devolver un error más amigable y con información útil
+        return {
+            "success": False,
+            "error": f"Error al crear solicitud de software: {str(e)}",
+            "message": "Hubo un problema al procesar la solicitud. Por favor, verifique los campos e intente nuevamente."
+        }
 
 @router.put("/software-solicitudes/{id}", 
           summary="Actualizar una solicitud de software",
@@ -359,34 +399,110 @@ async def get_software_estudiantes():
            description="Registra un nuevo estudiante de software",
            response_model=Dict[str, Any],
            tags=["Software Estudiantes"])
-async def create_software_estudiante(datos: Dict[str, Any]):
+async def create_software_estudiante(estudiante: Dict[str, Any]):
     """Crea un nuevo estudiante de software."""
     try:
         from config import supabase
+        import uuid
         
-        # Validar campos requeridos
-        if not datos.get("nombre"):
-            return error_response("El nombre es obligatorio", "El nombre es obligatorio")
+        print("\n\n===== DATOS RECIBIDOS DEL FRONTEND =====")
+        print(f"Datos recibidos: {estudiante}")
+        
+        # Manejar el campo solicitud_id
+        if "solicitud_id" in estudiante:
+            # Si solicitud_id no es un UUID válido, buscar la solicitud por nombre o eliminar el campo
+            try:
+                # Verificar si es un UUID válido
+                uuid.UUID(estudiante["solicitud_id"])
+                print(f"solicitud_id es un UUID válido: {estudiante['solicitud_id']}")
+            except ValueError:
+                print(f"solicitud_id no es un UUID válido: {estudiante['solicitud_id']}")
+                # Intentar buscar la solicitud por nombre del proyecto
+                try:
+                    nombre_proyecto = estudiante["solicitud_id"]
+                    print(f"Buscando solicitud con nombre: {nombre_proyecto}")
+                    solicitud = supabase.table("software_solicitudes").select("id").eq("nombre_proyecto", nombre_proyecto).execute()
+                    if solicitud.data and len(solicitud.data) > 0:
+                        estudiante["solicitud_id"] = solicitud.data[0]["id"]
+                        print(f"Encontrada solicitud con ID: {estudiante['solicitud_id']}")
+                    else:
+                        # Si no se encuentra, eliminar el campo para evitar errores
+                        print("No se encontró la solicitud, eliminando el campo solicitud_id")
+                        del estudiante["solicitud_id"]
+                except Exception as search_error:
+                    print(f"Error al buscar solicitud: {search_error}")
+                    # Eliminar el campo para evitar errores
+                    del estudiante["solicitud_id"]
+        
+        # Asegurar que los campos requeridos estén presentes
+        if "numero_identificacion" not in estudiante and "documento" in estudiante:
+            estudiante["numero_identificacion"] = estudiante["documento"]
+            print(f"Mapeando 'documento' a 'numero_identificacion': {estudiante['numero_identificacion']}")
             
-        if not datos.get("apellido"):
-            return error_response("El apellido es obligatorio", "El apellido es obligatorio")
-            
-        if not datos.get("documento"):
-            return error_response("El documento es obligatorio", "El documento es obligatorio")
-            
-        if not datos.get("programa"):
-            return error_response("El programa es obligatorio", "El programa es obligatorio")
+        if "nombre_estudiante" not in estudiante and "nombre" in estudiante:
+            # Si tenemos nombre y apellido, combinarlos
+            if "apellido" in estudiante:
+                estudiante["nombre_estudiante"] = f"{estudiante['nombre']} {estudiante['apellido']}"
+            else:
+                estudiante["nombre_estudiante"] = estudiante["nombre"]
+            print(f"Mapeando 'nombre' a 'nombre_estudiante': {estudiante['nombre_estudiante']}")
         
-        # Añadir timestamps
-        datos["created_at"] = datetime.now().isoformat()
-        datos["updated_at"] = datetime.now().isoformat()
+        # Añadir timestamps si no están presentes
+        if "created_at" not in estudiante:
+            from datetime import datetime
+            estudiante["created_at"] = datetime.now().isoformat()
+        if "updated_at" not in estudiante:
+            from datetime import datetime
+            estudiante["updated_at"] = datetime.now().isoformat()
         
-        # Crear estudiante
-        response = supabase.table("software_estudiantes").insert(datos).execute()
+        # Filtrar los campos que existen en la tabla para evitar errores
+        campos_validos = [
+            "id", "solicitud_id", "estudiante_id", "numero_identificacion", "nombre_estudiante", 
+            "correo", "telefono", "semestre", "programa", "asignatura", "docente", 
+            "created_at", "updated_at"
+        ]
         
-        return success_response(response.data[0], "Estudiante de software registrado exitosamente")
+        # Filtrar solo los campos válidos
+        estudiante_filtrado = {k: v for k, v in estudiante.items() if k in campos_validos}
+        
+        # Imprimir para depuración
+        print("\n===== DATOS PROCESADOS =====")
+        print(f"Estudiante original: {estudiante}")
+        print(f"Estudiante filtrado: {estudiante_filtrado}")
+        
+        # Verificar que tenemos al menos los campos mínimos necesarios
+        if not estudiante_filtrado.get("numero_identificacion") and not estudiante_filtrado.get("nombre_estudiante"):
+            print("ERROR: Faltan campos obligatorios (numero_identificacion o nombre_estudiante)")
+            return {
+                "success": False,
+                "error": "Faltan campos obligatorios",
+                "message": "Es necesario proporcionar al menos el número de identificación y el nombre del estudiante."
+            }
+        
+        # Insertar el estudiante filtrado
+        print("\n===== INTENTANDO INSERTAR EN LA BASE DE DATOS =====")
+        response = supabase.table("software_estudiantes").insert(estudiante_filtrado).execute()
+        print(f"Respuesta de la base de datos: {response.data}")
+        
+        if response.data and len(response.data) > 0:
+            print("Inserción exitosa")
+            return response.data[0]
+        else:
+            print("La inserción no devolvió datos")
+            return {
+                "success": True,
+                "message": "Estudiante registrado, pero no se recibieron datos de confirmación"
+            }
     except Exception as e:
-        return handle_exception(e, "crear estudiante de software")
+        print(f"\n===== ERROR AL CREAR ESTUDIANTE =====\nError: {e}")
+        import traceback
+        traceback.print_exc()
+        # Devolver un error más amigable y con información útil
+        return {
+            "success": False,
+            "error": f"Error al crear estudiante de software: {str(e)}",
+            "message": "Hubo un problema al procesar el estudiante. Por favor, verifique los campos e intente nuevamente."
+        }
 
 # Endpoints para Asistencias a Actividades
 @router.get("/asistencias-actividades", 
