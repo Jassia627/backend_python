@@ -1,25 +1,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
-import os
 
 # Importar configuración
-try:
-    from config import (
-        APP_NAME, APP_VERSION, APP_DESCRIPTION,
-        HOST, PORT,
-        CORS_ORIGINS, CORS_METHODS, CORS_HEADERS
-    )
-except ImportError:
-    # Valores predeterminados para Vercel
-    APP_NAME = "API Sistema de Permanencia UPC"
-    APP_VERSION = "1.0.0"
-    APP_DESCRIPTION = "API para el Sistema de Permanencia de la Universidad Popular del Cesar"
-    HOST = "0.0.0.0"
-    PORT = int(os.environ.get("PORT", 8000))
-    CORS_ORIGINS = ["*"]
-    CORS_METHODS = ["*"]
-    CORS_HEADERS = ["*"]
+from config import (
+    APP_NAME, APP_VERSION, APP_DESCRIPTION,
+    HOST, PORT,
+    CORS_ORIGINS, CORS_METHODS, CORS_HEADERS
+)
 
 # Importar rutas
 from routes.usuarios import router as usuarios_router
@@ -79,9 +67,6 @@ async def root():
         "documentation": "/docs",
         "redoc": "/redoc"
     }
-
-# Para Vercel
-handler = app
 
 if __name__ == "__main__":
     import uvicorn
