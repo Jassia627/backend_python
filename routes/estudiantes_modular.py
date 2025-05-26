@@ -147,25 +147,6 @@ async def delete_estudiante(id: str):
     except Exception as e:
         return handle_exception(e, "eliminar estudiante")
 
-@router.get("/estudiantes/documento/{tipo_documento}/{numero_documento}", 
-          summary="Buscar estudiante por documento",
-          description="Busca un estudiante por tipo y número de documento",
-          response_model=Dict[str, Any],
-          tags=["Estudiantes"])
-async def get_estudiante_by_documento(tipo_documento: str, numero_documento: str):
-    try:
-        estudiante = service.get_estudiante_by_documento(tipo_documento, numero_documento)
-        if not estudiante:
-            return error_response(
-                f"Estudiante con documento {tipo_documento} {numero_documento} no encontrado", 
-                "Estudiante no encontrado", 
-                404
-            )
-
-        return success_response(estudiante, "Estudiante encontrado exitosamente")
-    except Exception as e:
-        return handle_exception(e, "buscar estudiante por documento")
-
 @router.post("/estudiantes/buscar-o-crear", 
            summary="Buscar o crear estudiante",
            description="Busca un estudiante por documento o lo crea si no existe",
