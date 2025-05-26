@@ -1,6 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
+import sys
+import os
+
+# Añadir el directorio raíz al path para poder importar módulos
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Importar configuración
 from config import (
@@ -20,7 +25,6 @@ from routes.actas import router as actas_router
 from routes.permanencia_modular import router as permanencia_router
 from routes.intervenciones_grupales import router as intervenciones_grupales_router
 from routes.importar_intervenciones import router as importar_intervenciones_router
-from routes.uploads import router as uploads_router
 
 # Inicializar FastAPI
 app = FastAPI(
