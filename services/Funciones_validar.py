@@ -42,19 +42,12 @@ def validar_campos_comunes(datos: Dict[str, Any]) -> Dict[str, str]:
     if not Validador.es_texto(correo) or not re.match(r'^[\w\-.]+@([\w-]+\.)+[\w-]{2,4}$', correo):
         err["correo"] = "Correo requerido y válido"
 
-<<<<<<< HEAD
     telefono = datos.get("telefono")
     if telefono not in (None, "") and not re.match(r'^3\d{9}$', str(telefono)):
         err["telefono"] = "Teléfono debe ser celular colombiano (3** *** ****)"
 
     direccion = datos.get("direccion", "")
     if direccion and not Validador.es_texto(direccion, 100):
-=======
-    if datos.get("telefono") and not re.match(r'^3\d{9}$', str(datos["telefono"])):
-        err["telefono"] = "Teléfono debe ser celular colombiano (3** *** ****)"
-
-    if datos.get("direccion") and not Validador.es_texto(datos["direccion"], 100):
->>>>>>> 7d306b56a16be3d40704e76a6e7ec2bdd04cf0fd
         err["direccion"] = "Dirección máxima 100 caracteres"
 
     if not Validador.en_lista(datos.get("programa_academico"), programas):
@@ -83,14 +76,9 @@ def validar_POA(datos: Dict[str, Any]) -> Dict[str, str]:
     if not Validador.es_fecha_valida(datos.get("fecha_asignacion", "")):
         err["fecha_asignacion"] = "Fecha de asignación requerida en formato YYYY-MM-DD"
 
-<<<<<<< HEAD
     if datos.get("acciones_apoyo") not in (None, "") and not Validador.es_texto(datos["acciones_apoyo"], 255):
         err["acciones_apoyo"] = "Campo 'acciones_apoyo' debe ser texto válido (máximo 255 caracteres)"
 
-=======
-    if not Validador.es_texto(datos.get("acciones_apoyo", ""), 255):
-        err["acciones_apoyo"] = "Campo 'acciones_apoyo' es obligatorio y debe ser texto válido"
->>>>>>> 7d306b56a16be3d40704e76a6e7ec2bdd04cf0fd
 
     return err
 
@@ -106,13 +94,8 @@ def validar_pops(datos: Dict[str, Any]) -> Dict[str, str]:
     if not Validador.es_fecha_valida(datos.get("fecha_atencion", "")):
         err["fecha_atencion"] = "Fecha de atención requerida en formato YYYY-MM-DD"
 
-<<<<<<< HEAD
     if datos.get("seguimiento") not in (None, "") and not Validador.es_texto(datos["seguimiento"], 255):
         err["seguimiento"] = "Seguimiento debe ser texto válido (máximo 255 caracteres)"
-=======
-    if not Validador.es_texto(datos.get("seguimiento", ""), 255):
-        err["seguimiento"] = "Seguimiento requerido y válido"
->>>>>>> 7d306b56a16be3d40704e76a6e7ec2bdd04cf0fd
 
     return err
 
@@ -122,13 +105,8 @@ def validar_apoyo_socioeconomico(datos: Dict[str, Any]) -> Dict[str, str]:
     if not Validador.es_texto(datos.get("tipo_vulnerabilidad", ""), 100):
         err["tipo_vulnerabilidad"] = "Tipo de vulnerabilidad requerido y válido"
 
-<<<<<<< HEAD
     if datos.get("observaciones") not in (None, "") and not Validador.es_texto(datos["observaciones"], 255):
         err["observaciones"] = "Observaciones deben ser texto válido (máximo 255 caracteres)"
-=======
-    if not Validador.es_texto(datos.get("observaciones", ""), 255):
-        err["observaciones"] = "Observaciones requeridas y válidas"
->>>>>>> 7d306b56a16be3d40704e76a6e7ec2bdd04cf0fd
 
     return err
 
@@ -144,13 +122,8 @@ def validar_povau(datos: Dict[str, Any]) -> Dict[str, str]:
     if not Validador.es_fecha_valida(datos.get("fecha_ingreso_programa", "")):
         err["fecha_ingreso_programa"] = "Fecha de ingreso requerida y válida"
 
-<<<<<<< HEAD
     if datos.get("observaciones") not in (None, "") and not Validador.es_texto(datos["observaciones"], 255):
         err["observaciones"] = "Observaciones deben ser texto válido (máximo 255 caracteres)"
-=======
-    if not Validador.es_texto(datos.get("observaciones", ""), 255):
-        err["observaciones"] = "Observaciones requeridas y válidas"
->>>>>>> 7d306b56a16be3d40704e76a6e7ec2bdd04cf0fd
 
     return err
 
@@ -163,13 +136,8 @@ def validar_taller_habilidades(datos: Dict[str, Any]) -> Dict[str, str]:
     if not Validador.es_fecha_valida(datos.get("fecha_taller", "")):
         err["fecha_taller"] = "Fecha requerida en formato YYYY-MM-DD"
 
-<<<<<<< HEAD
     if datos.get("observaciones") not in (None, "") and not Validador.es_texto(datos["observaciones"], 255):
         err["observaciones"] = "Observaciones deben ser texto válido (máximo 255 caracteres)"
-=======
-    if not Validador.es_texto(datos.get("observaciones", ""), 255):
-        err["observaciones"] = "Observaciones requeridas y válidas"
->>>>>>> 7d306b56a16be3d40704e76a6e7ec2bdd04cf0fd
 
     return err
 
@@ -202,12 +170,7 @@ def validar_comedor_universitario(datos: Dict[str, Any]) -> Dict[str, str]:
     if not Validador.en_rango_numerico(datos.get("raciones_asignadas", 0), 1, 100):
         err["raciones_asignadas"] = "Raciones asignadas debe ser un número entre 1 y 100"
 
-<<<<<<< HEAD
     if datos.get("observaciones") not in (None, "") and not Validador.es_texto(datos["observaciones"], 255):
         err["observaciones"] = "Observaciones deben ser texto válido (máximo 255 caracteres)"
-=======
-    if not Validador.es_texto(datos.get("observaciones", ""), 255):
-        err["observaciones"] = "Observaciones requeridas y válidas"
->>>>>>> 7d306b56a16be3d40704e76a6e7ec2bdd04cf0fd
 
     return err

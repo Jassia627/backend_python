@@ -236,65 +236,71 @@ async def get_software_solicitud(id: str):
            response_model=Dict[str, Any],
            tags=["Software Solicitudes"])
 async def create_software_solicitud(solicitud: Dict[str, Any]):
-    """Crea una nueva solicitud de software."""
+    """Crea una nueva solicitud de software con campos específicos permitidos."""
     try:
         from config import supabase
-        
-        # Añadir valores por defecto para campos requeridos si no están presentes
-        if "nombre_proyecto" not in solicitud or not solicitud["nombre_proyecto"]:
-            # Usar nombre_asignatura como nombre_proyecto si está disponible
-            if "nombre_asignatura" in solicitud and solicitud["nombre_asignatura"]:
-                solicitud["nombre_proyecto"] = f"Proyecto {solicitud['nombre_asignatura']}"
-            else:
-                solicitud["nombre_proyecto"] = "Proyecto de Software"
-        
-        # Añadir estado por defecto si no está presente
-        if "estado" not in solicitud or not solicitud["estado"]:
+        import re
+
+        # ✅ Validar estudiante_id obligatorio
+        if not solicitud.get("estudiante_id"):
+            return {
+                "success": False,
+                "error": "El estudiante_id es obligatorio.",
+                "message": "Debe especificar el ID del estudiante solicitante."
+            }
+
+        # ✅ Validar formato UUID básico
+        if not re.fullmatch(r"[a-f0-9\-]{36}", solicitud["estudiante_id"]):
+            return {
+                "success": False,
+                "error": "Formato de estudiante_id inválido.",
+                "message": "El ID del estudiante no tiene un formato válido (UUID)."
+            }
+
+        # ✅ Verificar que el estudiante exista
+        estudiante_check = supabase.table("estudiantes").select("id").eq("id", solicitud["estudiante_id"]).execute()
+        if not estudiante_check.data:
+            return {
+                "success": False,
+                "error": "El estudiante no existe.",
+                "message": "No se encontró ningún estudiante registrado con el ID proporcionado."
+            }
+
+        # ✅ Validaciones por tipo (solo letras y espacios)
+        campos_solo_letras = [
+            "docente_tutor", "facultad", "estudiante_programa_academico",
+            "nombre_asignatura", "nombre_proyecto"
+        ]
+
+        for campo in campos_solo_letras:
+            valor = solicitud.get(campo)
+            if valor and not re.fullmatch(r"[A-Za-zÁÉÍÓÚÑáéíóúñ\s]+", valor.strip()):
+                return {
+                    "success": False,
+                    "error": f"El campo '{campo}' contiene caracteres no válidos.",
+                    "message": f"El campo '{campo}' solo debe contener letras y espacios."
+                }
+
+        # ✅ Asignar estado si no viene
+        if not solicitud.get("estado"):
             solicitud["estado"] = "Pendiente"
-            
-        # Añadir fecha de solicitud si no está presente
-        if "fecha_solicitud" not in solicitud or not solicitud["fecha_solicitud"]:
-            from datetime import datetime
-            solicitud["fecha_solicitud"] = datetime.now().isoformat()
-        
-        # Buscar programa_id si tenemos estudiante_programa_academico pero no programa_id
-        if ("estudiante_programa_academico" in solicitud and 
-            solicitud["estudiante_programa_academico"] and 
-            "programa_id" not in solicitud):
-            programa = supabase.table("programas").select("id").eq("nombre", solicitud["estudiante_programa_academico"]).execute()
-            if programa.data and len(programa.data) > 0:
-                solicitud["programa_id"] = programa.data[0]["id"]
-        
-        # Añadir timestamps si no están presentes
-        if "created_at" not in solicitud:
-            from datetime import datetime
-            solicitud["created_at"] = datetime.now().isoformat()
-        if "updated_at" not in solicitud:
-            from datetime import datetime
-            solicitud["updated_at"] = datetime.now().isoformat()
-        
-        # Filtrar los campos que existen en la tabla para evitar errores
+
+        # ✅ Solo los campos válidos definidos
         campos_validos = [
             "id", "estudiante_id", "programa_id", "usuario_id", "docente_tutor", 
             "facultad", "estudiante_programa_academico", "nombre_asignatura", 
             "nombre_proyecto", "descripcion", "estado", "fecha_solicitud", 
-            "fecha_aprobacion", "observaciones", "created_at", "updated_at",
-            "nombre_software", "justificacion", "version", "url_descarga"
+            "fecha_aprobacion", "observaciones", "created_at", "updated_at"
         ]
-        
-        # Filtrar solo los campos válidos
+
         solicitud_filtrada = {k: v for k, v in solicitud.items() if k in campos_validos}
-        
-        # Imprimir para depuración
-        print(f"Solicitud original: {solicitud}")
-        print(f"Solicitud filtrada: {solicitud_filtrada}")
-        
-        # Insertar la solicitud filtrada
+
+        # ✅ Insertar la solicitud filtrada
         response = supabase.table("software_solicitudes").insert(solicitud_filtrada).execute()
         return response.data[0]
+
     except Exception as e:
         print(f"Error al crear solicitud de software: {e}")
-        # Devolver un error más amigable y con información útil
         return {
             "success": False,
             "error": f"Error al crear solicitud de software: {str(e)}",
