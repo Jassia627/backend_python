@@ -236,68 +236,71 @@ async def get_software_solicitud(id: str):
            response_model=Dict[str, Any],
            tags=["Software Solicitudes"])
 async def create_software_solicitud(solicitud: Dict[str, Any]):
-    """Crea una nueva solicitud de software con campos específicos permitidos."""
+    """Crea una nueva solicitud de software."""
     try:
         from config import supabase
-        import re
-
-        # ✅ Validar estudiante_id obligatorio
-        if not solicitud.get("estudiante_id"):
-            return {
-                "success": False,
-                "error": "El estudiante_id es obligatorio.",
-                "message": "Debe especificar el ID del estudiante solicitante."
-            }
-
-        # ✅ Validar formato UUID básico
-        if not re.fullmatch(r"[a-f0-9\-]{36}", solicitud["estudiante_id"]):
-            return {
-                "success": False,
-                "error": "Formato de estudiante_id inválido.",
-                "message": "El ID del estudiante no tiene un formato válido (UUID)."
-            }
-
-        # ✅ Verificar que el estudiante exista
-        estudiante_check = supabase.table("estudiantes").select("id").eq("id", solicitud["estudiante_id"]).execute()
-        if not estudiante_check.data:
-            return {
-                "success": False,
-                "error": "El estudiante no existe.",
-                "message": "No se encontró ningún estudiante registrado con el ID proporcionado."
-            }
-
-        # ✅ Validaciones por tipo (solo letras y espacios)
-        campos_solo_letras = [
-            "docente_tutor", "facultad", "estudiante_programa_academico",
-            "nombre_asignatura", "nombre_proyecto"
-        ]
-
-        for campo in campos_solo_letras:
-            valor = solicitud.get(campo)
-            if valor and not re.fullmatch(r"[A-Za-zÁÉÍÓÚÑáéíóúñ\s]+", valor.strip()):
-                return {
-                    "success": False,
-                    "error": f"El campo '{campo}' contiene caracteres no válidos.",
-                    "message": f"El campo '{campo}' solo debe contener letras y espacios."
-                }
-
-        # ✅ Asignar estado si no viene
+        from datetime import datetime
+        
+        print(f"Datos recibidos para solicitud de software: {solicitud}")
+        
+        # Mapear campos del frontend a la estructura de la base de datos
+        # Estos son los campos que espera recibir del frontend basado en el formulario
+        if "nombre_solicitante" in solicitud and not "docente_tutor" in solicitud:
+            solicitud["docente_tutor"] = solicitud["nombre_solicitante"]
+            
+        if "correo_solicitante" in solicitud and not "correo" in solicitud:
+            solicitud["correo"] = solicitud["correo_solicitante"]
+            
+        if "telefono_solicitante" in solicitud and not "telefono" in solicitud:
+            solicitud["telefono"] = solicitud["telefono_solicitante"]
+            
+        if "programa_academico" in solicitud and not "estudiante_programa_academico" in solicitud:
+            solicitud["estudiante_programa_academico"] = solicitud["programa_academico"]
+            
+        if "nombre_software" in solicitud and not "nombre_proyecto" in solicitud:
+            solicitud["nombre_proyecto"] = solicitud["nombre_software"]
+            
+        if "justificacion" in solicitud and not "descripcion" in solicitud:
+            solicitud["descripcion"] = solicitud["justificacion"]
+        
+        # Asignar estado si no viene
         if not solicitud.get("estado"):
             solicitud["estado"] = "Pendiente"
-
-        # ✅ Solo los campos válidos definidos
+            
+        # Agregar timestamps
+        if not "created_at" in solicitud:
+            solicitud["created_at"] = datetime.now().isoformat()
+        if not "updated_at" in solicitud:
+            solicitud["updated_at"] = datetime.now().isoformat()
+        
+        # Definir todos los campos válidos que pueden estar en la tabla
         campos_validos = [
             "id", "estudiante_id", "programa_id", "usuario_id", "docente_tutor", 
             "facultad", "estudiante_programa_academico", "nombre_asignatura", 
             "nombre_proyecto", "descripcion", "estado", "fecha_solicitud", 
-            "fecha_aprobacion", "observaciones", "created_at", "updated_at"
+            "fecha_aprobacion", "observaciones", "created_at", "updated_at",
+            "nombre_solicitante", "correo_solicitante", "telefono_solicitante",
+            "programa_academico", "nombre_software", "version", "justificacion",
+            "correo", "telefono"
         ]
-
+        
+        # Filtrar solo los campos válidos
         solicitud_filtrada = {k: v for k, v in solicitud.items() if k in campos_validos}
-
-        # ✅ Insertar la solicitud filtrada
-        response = supabase.table("software_solicitudes").insert(solicitud_filtrada).execute()
-        return response.data[0]
+        
+        print(f"Solicitud filtrada: {solicitud_filtrada}")
+        
+        # Insertar la solicitud en la base de datos
+        try:
+            response = supabase.table("software_solicitudes").insert(solicitud_filtrada).execute()
+            print(f"Respuesta de la base de datos: {response.data}")
+            
+            if response.data and len(response.data) > 0:
+                return success_response(response.data[0], "Solicitud de software registrada exitosamente")
+            else:
+                return error_response("No se pudo registrar la solicitud de software", "Error al registrar solicitud")
+        except Exception as db_error:
+            print(f"Error específico de la base de datos: {db_error}")
+            return error_response(f"Error al insertar en la base de datos: {str(db_error)}", "Error de base de datos")
 
     except Exception as e:
         print(f"Error al crear solicitud de software: {e}")
@@ -505,98 +508,148 @@ async def create_asistencia_actividad(asistencia: Dict[str, Any]):
     """Crea una nueva asistencia a actividad."""
     try:
         from config import supabase
-        import re
-
-        if "nombre_estudiante" in asistencia:
-            if not re.fullmatch(r"[A-Za-zÁÉÍÓÚáéíóúÑñ ]+", asistencia["estudiante_programa_academico"]):
-                raise ValueError("El campo 'estudiante_programa_academico' debe contener solo letras y espacios.")
-
-        if "numero_documento" in asistencia:
-            if not str(asistencia["numero_documento"]).isdigit():
-                raise ValueError("El campo 'numero_documento' debe contener solo números.")
-            if not 7 <= len(str(asistencia["numero_documento"])) <= 10:
-                raise ValueError("El campo 'numero_documento' debe tener entre 7 y 10 dígitos.")
-
-        if "estudiante_programa_academico" in asistencia:
-            if not re.fullmatch(r"[A-Za-zÁÉÍÓÚáéíóúÑñ ]+", asistencia["estudiante_programa_academico"]):
-                raise ValueError("El campo 'estudiante_programa_academico' debe contener solo letras y espacios.")
-
-        if "estudiante_programa_academico_academico" in asistencia:
-            if not re.fullmatch(r"[A-Za-zÁÉÍÓÚáéíóúÑñ ]+", asistencia["estudiante_programa_academico_academico"]):
-                raise ValueError("El campo 'estudiante_programa_academico_academico' debe contener solo letras y espacios.")
-
-        if "semestre" in asistencia:
-            if not str(asistencia["semestre"]).isdigit() or int(asistencia["semestre"]) <= 0:
-                raise ValueError("El campo 'semestre' debe ser un número mayor a 0.")
-
-        if "nombre_actividad" in asistencia:
-            if not re.fullmatch(r"[A-Za-zÁÉÍÓÚáéíóúÑñ ]+", asistencia["estudiante_programa_academico_academico"]):
-                raise ValueError("El campo 'estudiante_programa_academico_academico' debe contener solo letras y espacios.")
-
-        if "modalidad" in asistencia and asistencia["modalidad"] not in ["Virtual", "Presencial", "Híbrida"]:
-            raise ValueError("El campo 'modalidad' solo puede ser 'Virtual', 'Presencial' o 'Híbrida'.")
-
-        if "tipo_actividad" in asistencia and not asistencia["tipo_actividad"].isalpha():
-            raise ValueError("El campo 'tipo_actividad' debe contener solo letras.")
-
-        if "fecha_actividad" in asistencia:
-            if not re.match(r"^\d{2}/\d{2}/\d{4}$", asistencia["fecha_actividad"]):
-                raise ValueError("El campo 'fecha_actividad' debe tener el formato dd/mm/yyyy.")
-
-        if "hora_inicio" in asistencia:
-            if not re.match(r"^\d{2}:\d{2}$", asistencia["hora_inicio"]):
-                raise ValueError("El campo 'hora_inicio' debe tener el formato HH:MM.")
-
-        if "hora_fin" in asistencia:
-            if not re.match(r"^\d{2}:\d{2}$", asistencia["hora_fin"]):
-                raise ValueError("El campo 'hora_fin' debe tener el formato HH:MM.")
-
-        if "modalidad_registro" in asistencia and asistencia["modalidad_registro"] not in ["Manual", "Digital"]:
-            raise ValueError("El campo 'modalidad_registro' solo puede ser 'Manual' o 'Digital'.")
-
-        if "observaciones" in asistencia:
-            if not re.match(r"^[\w\s.,;:¡!¿?@#$%&()\-+=/\\]$", asistencia["observaciones"]):
-                raise ValueError("El campo 'observaciones' contiene caracteres no permitidos.")
-
-        # Manejar el campo estudiante_programa_academico_academico
+        
+        print(f"Datos recibidos para asistencia a actividad: {asistencia}")
+        
+        # Manejar el campo estudiante_programa_academico_academico si existe
         if "estudiante_programa_academico_academico" in asistencia:
             asistencia["estudiante_programa_academico"] = asistencia["estudiante_programa_academico_academico"]
-
+        
         # Buscar estudiante por número de documento si está disponible
         if "numero_documento" in asistencia and "estudiante_id" not in asistencia:
             estudiante = supabase.table("estudiantes").select("id").eq("documento", asistencia["numero_documento"]).execute()
             if estudiante.data and len(estudiante.data) > 0:
                 asistencia["estudiante_id"] = estudiante.data[0]["id"]
+                print(f"Estudiante encontrado con ID: {asistencia['estudiante_id']}")
             else:
+                # Si no se encuentra el estudiante, establecer estudiante_id como NULL
                 asistencia["estudiante_id"] = None
-
+                print("No se encontró estudiante con ese documento")
+        
+        # Filtrar los campos que existen en la tabla para evitar errores
         campos_validos = [
-            "id", "estudiante_id", "nombre_estudiante", "numero_documento",
-            "estudiante_programa_academico", "estudiante_programa_academico_academico",
-            "semestre", "nombre_actividad", "modalidad", "tipo_actividad",
-            "fecha_actividad", "hora_inicio", "hora_fin", "modalidad_registro",
+            "id", "estudiante_id", "nombre_estudiante", "numero_documento", 
+            "estudiante_programa_academico", "estudiante_programa_academico_academico", 
+            "semestre", "nombre_actividad", "modalidad", "tipo_actividad", 
+            "fecha_actividad", "hora_inicio", "hora_fin", "modalidad_registro", 
             "observaciones", "created_at", "updated_at"
         ]
-
+        
+        # Filtrar solo los campos válidos
         asistencia_filtrada = {k: v for k, v in asistencia.items() if k in campos_validos}
-
+        
+        # Añadir timestamps
         if "created_at" not in asistencia_filtrada:
+            from datetime import datetime
             asistencia_filtrada["created_at"] = datetime.now().isoformat()
         if "updated_at" not in asistencia_filtrada:
+            from datetime import datetime
             asistencia_filtrada["updated_at"] = datetime.now().isoformat()
-
+        
+        # Imprimir para depuración
         print(f"Asistencia original: {asistencia}")
         print(f"Asistencia filtrada: {asistencia_filtrada}")
-
+        
+        # Insertar en la base de datos
         response = supabase.table("asistencias_actividades").insert(asistencia_filtrada).execute()
-        return response.data[0]
+        print(f"Respuesta de la base de datos: {response.data}")
+        
+        if response.data and len(response.data) > 0:
+            return success_response(response.data[0], "Asistencia a actividad registrada exitosamente")
+        else:
+            return error_response("No se pudo registrar la asistencia", "Error al registrar asistencia")
     except Exception as e:
-        print(f"Error al crear asistencia a actividad: {e}")
-        return {
-            "success": False,
-            "error": f"Error al crear asistencia a actividad: {str(e)}",
-            "message": "Hubo un problema al procesar la asistencia. Por favor, verifique los campos e intente nuevamente."
-        }
+        print(f"Error al crear asistencia a actividad: {str(e)}")
+        return handle_exception(e, "crear asistencia a actividad")
+
+# Endpoints para Remisiones Psicológicas
+@router.get("/remisiones-psicologicas", 
+           summary="Obtener todas las remisiones psicológicas",
+           description="Retorna una lista de todas las remisiones psicológicas registradas",
+           response_model=List[Dict[str, Any]],
+           tags=["Remisiones Psicológicas"])
+async def get_remisiones_psicologicas():
+    """Obtiene todas las remisiones psicológicas."""
+    try:
+        from config import supabase
+        response = supabase.table("remisiones_psicologicas").select("*").execute()
+        return response.data
+    except Exception as e:
+        print(f"Error al obtener remisiones psicológicas: {e}")
+        raise HTTPException(status_code=500, detail=f"Error al obtener remisiones psicológicas: {str(e)}")
+
+@router.post("/remisiones-psicologicas", 
+           summary="Crear una nueva remisión psicológica",
+           description="Registra una nueva remisión psicológica",
+           response_model=Dict[str, Any],
+           tags=["Remisiones Psicológicas"])
+async def create_remision_psicologica(remision: Dict[str, Any]):
+    """Crea una nueva remisión psicológica."""
+    try:
+        from config import supabase
+        from datetime import datetime
+        
+        print(f"Datos recibidos para remisión psicológica: {remision}")
+        
+        # Mapear campos correctamente
+        if "estudiante_programa_academico_academico" in remision and not "programa_academico" in remision:
+            remision["programa_academico"] = remision["estudiante_programa_academico_academico"]
+            print(f"Mapeando estudiante_programa_academico_academico a programa_academico: {remision['programa_academico']}")
+        
+        # Si no hay programa_academico, establecer un valor por defecto
+        if not "programa_academico" in remision or not remision["programa_academico"]:
+            remision["programa_academico"] = "No especificado"
+            print(f"Estableciendo programa_academico por defecto: {remision['programa_academico']}")
+        
+        # Buscar estudiante por número de documento si está disponible
+        if "numero_documento" in remision and "estudiante_id" not in remision:
+            estudiante = supabase.table("estudiantes").select("id").eq("documento", remision["numero_documento"]).execute()
+            if estudiante.data and len(estudiante.data) > 0:
+                remision["estudiante_id"] = estudiante.data[0]["id"]
+                print(f"Estudiante encontrado con ID: {remision['estudiante_id']}")
+            else:
+                # Si no se encuentra el estudiante, establecer estudiante_id como NULL
+                remision["estudiante_id"] = None
+                print("No se encontró estudiante con ese documento")
+        
+        # Filtrar los campos que existen en la tabla para evitar errores
+        campos_validos = [
+            "id", "estudiante_id", "nombre_estudiante", "numero_documento", 
+            "programa_academico", "semestre", "motivo_remision", "docente_remite", 
+            "correo_docente", "telefono_docente", "fecha", "hora", "tipo_remision", 
+            "observaciones", "created_at", "updated_at"
+        ]
+        
+        # Filtrar solo los campos válidos
+        remision_filtrada = {k: v for k, v in remision.items() if k in campos_validos}
+        
+        # Añadir timestamps
+        if "created_at" not in remision_filtrada:
+            remision_filtrada["created_at"] = datetime.now().isoformat()
+        if "updated_at" not in remision_filtrada:
+            remision_filtrada["updated_at"] = datetime.now().isoformat()
+        
+        # Imprimir para depuración
+        print(f"Remisión filtrada: {remision_filtrada}")
+        
+        # Insertar en la base de datos
+        try:
+            response = supabase.table("remisiones_psicologicas").insert(remision_filtrada).execute()
+            print(f"Respuesta de la base de datos: {response.data}")
+            
+            if response.data and len(response.data) > 0:
+                return success_response(response.data[0], "Remisión psicológica registrada exitosamente")
+            else:
+                return error_response("No se pudo registrar la remisión psicológica", "Error al registrar remisión")
+        except Exception as db_error:
+            print(f"Error específico de la base de datos: {db_error}")
+            return error_response(f"Error al insertar en la base de datos: {str(db_error)}", "Error de base de datos")
+            
+    except Exception as e:
+        print(f"Error al crear remisión psicológica: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return handle_exception(e, "crear remisión psicológica")
 
 # Endpoints para Fichas Docente
 @router.get("/fichas-docente", 
@@ -625,94 +678,35 @@ async def create_ficha_docente(ficha: Dict[str, Any]):
         from config import supabase
         import re
         from datetime import datetime
-
-        # 📌 VALIDACIONES
-
+        
+        print(f"Datos recibidos para ficha docente: {ficha}")
+        
+        # Validaciones básicas (solo las esenciales)
+        
         # Documento obligatorio
         doc = ficha.get("documento_identidad")
         if not doc:
-            return {
-                "success": False,
-                "error": "El documento es obligatorio.",
-                "message": "Debe ingresar el número de documento del docente."
-            }
-        if not str(doc).isdigit():
-            return {
-                "success": False,
-                "error": "El documento debe contener solo números.",
-                "message": "Documento inválido."
-            }
-        if not (7 <= len(str(doc)) <= 10):
-            return {
-                "success": False,
-                "error": "El documento debe tener entre 7 y 10 dígitos.",
-                "message": "Documento inválido."
-            }
-
-        # Verificar duplicado por documento
-        existe_doc = supabase.table("fichas_docente").select("id").eq("documento_identidad", doc).execute()
-        if existe_doc.data:
-            return {
-                "success": False,
-                "error": "Ya existe una ficha docente con este número de documento.",
-                "message": "Documento duplicado."
-            }
-
-        # Validar nombres_apellidos (solo letras y espacios)
-        nombres = ficha.get("nombres_apellidos", "").strip()
-        if nombres and not re.fullmatch(r"[A-Za-zÁÉÍÓÚáéíóúÑñ ]+", nombres):
-            return {
-                "success": False,
-                "error": "El campo nombres_apellidos solo debe contener letras y espacios.",
-                "message": "Nombre inválido."
-            }
-
-        # Validar celular
-        celular = ficha.get("celular")
-        if celular:
-            celular = str(celular)
-            if not celular.isdigit():
-                return {
-                    "success": False,
-                    "error": "El celular debe contener solo números.",
-                    "message": "Celular inválido."
-                }
-            if len(celular) != 10:
-                return {
-                    "success": False,
-                    "error": "El celular debe tener exactamente 10 dígitos.",
-                    "message": "Celular inválido."
-                }
-            if not celular.startswith("3"):
-                return {
-                    "success": False,
-                    "error": "El celular debe comenzar con '3'.",
-                    "message": "Celular inválido."
-                }
-
-        # Validar correo institucional
+            return error_response("El documento es obligatorio", "Debe ingresar el número de documento del docente")
+        
+        # Correo institucional obligatorio
         correo = ficha.get("correo_institucional", "").lower()
         if not correo:
-            return {
-                "success": False,
-                "error": "El correo institucional es obligatorio.",
-                "message": "Debe ingresar un correo institucional."
-            }
-        if not correo.endswith("@unicesar.edu.co"):
-            return {
-                "success": False,
-                "error": "El correo institucional debe terminar en @unicesar.edu.co.",
-                "message": "Correo institucional inválido."
-            }
+            return error_response("El correo institucional es obligatorio", "Debe ingresar un correo institucional")
+        
+        # Verificar duplicados solo si no es una actualización
+        if not ficha.get("id"):
+            # Verificar duplicado por documento
+            existe_doc = supabase.table("fichas_docente").select("id").eq("documento_identidad", doc).execute()
+            if existe_doc.data and len(existe_doc.data) > 0:
+                print(f"Ya existe una ficha con documento {doc}: {existe_doc.data}")
+                return error_response("Ya existe una ficha docente con este número de documento", "Documento duplicado")
+            
+            # Verificar duplicado de correo institucional
+            existe_correo = supabase.table("fichas_docente").select("id").eq("correo_institucional", correo).execute()
+            if existe_correo.data and len(existe_correo.data) > 0:
+                print(f"Ya existe una ficha con correo {correo}: {existe_correo.data}")
+                return error_response("Ya existe una ficha docente con este correo institucional", "Correo duplicado")
 
-        # Verificar duplicado de correo institucional
-        existe_correo = supabase.table("fichas_docente").select("id").eq("correo_institucional", correo).execute()
-        if existe_correo.data:
-            return {
-                "success": False,
-                "error": "Ya existe una ficha docente con este correo institucional.",
-                "message": "Correo duplicado."
-            }
 
         # Filtrar campos válidos
         campos_validos = [
@@ -723,25 +717,37 @@ async def create_ficha_docente(ficha: Dict[str, Any]):
             "ciclo_formacion", "pregrado", "especializacion", "maestria", "doctorado", 
             "grupo_investigacion", "cual_grupo", "horas_semanales", "created_at", "updated_at"
         ]
-
+        
+        # Añadir timestamps
         if "created_at" not in ficha:
             ficha["created_at"] = datetime.now().isoformat()
         if "updated_at" not in ficha:
             ficha["updated_at"] = datetime.now().isoformat()
-
+        
+        # Filtrar solo los campos válidos
         ficha_filtrada = {k: v for k, v in ficha.items() if k in campos_validos}
-
-        # Insertar en base de datos
-        response = supabase.table("fichas_docente").insert(ficha_filtrada).execute()
-        return response.data[0]
-
+        
+        # Imprimir para depuración
+        print(f"Ficha filtrada: {ficha_filtrada}")
+        
+        # Insertar en la base de datos
+        try:
+            response = supabase.table("fichas_docente").insert(ficha_filtrada).execute()
+            print(f"Respuesta de la base de datos: {response.data}")
+            
+            if response.data and len(response.data) > 0:
+                return success_response(response.data[0], "Ficha docente registrada exitosamente")
+            else:
+                return error_response("No se pudo registrar la ficha docente", "Error al registrar ficha")
+        except Exception as db_error:
+            print(f"Error específico de la base de datos: {db_error}")
+            return error_response(f"Error al insertar en la base de datos: {str(db_error)}", "Error de base de datos")
+            
     except Exception as e:
-        print(f"Error al crear ficha docente: {e}")
-        return {
-            "success": False,
-            "error": f"Error al crear ficha docente: {str(e)}",
-            "message": "Hubo un problema al procesar la ficha docente. Por favor, verifique los campos e intente nuevamente."
-        }
+        print(f"Error al crear ficha docente: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return handle_exception(e, "crear ficha docente")
 
 
 # Endpoints para Intervenciones Grupales
