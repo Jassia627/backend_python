@@ -1,18 +1,17 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "api/main.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "api/main.py"
-    }
-  ],
-  "env": {
-    "APP_MODULE": "api.main:app"
+    "functions": {
+      "api/index.py": {
+        "runtime": "@vercel/python"
+      }
+    },
+    "routes": [
+      {
+        "src": "/api/(.*)",
+        "dest": "/api/index.py"
+      },
+      {
+        "src": "/(.*)",
+        "dest": "/api/index.py"
+      }
+    ]
   }
-}
