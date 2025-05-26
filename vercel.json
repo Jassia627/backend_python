@@ -14,14 +14,5 @@
   ],
   "env": {
     "APP_MODULE": "api.main:app"
-  },
-  "excludeFiles": [
-    "**/*.pyc",
-    "**/__pycache__/**",
-    ".env",
-    ".git/**",
-    ".venv/**",
-    "tests/**",
-    "README.md"
-  ]
+  }
 }
