@@ -601,7 +601,98 @@ async def create_ficha_docente(ficha: Dict[str, Any]):
     """Crea una nueva ficha docente."""
     try:
         from config import supabase
-        # Filtrar los campos que existen en la tabla para evitar errores
+        import re
+        from datetime import datetime
+
+        # 📌 VALIDACIONES
+
+        # Documento obligatorio
+        doc = ficha.get("documento_identidad")
+        if not doc:
+            return {
+                "success": False,
+                "error": "El documento es obligatorio.",
+                "message": "Debe ingresar el número de documento del docente."
+            }
+        if not str(doc).isdigit():
+            return {
+                "success": False,
+                "error": "El documento debe contener solo números.",
+                "message": "Documento inválido."
+            }
+        if not (7 <= len(str(doc)) <= 10):
+            return {
+                "success": False,
+                "error": "El documento debe tener entre 7 y 10 dígitos.",
+                "message": "Documento inválido."
+            }
+
+        # Verificar duplicado por documento
+        existe_doc = supabase.table("fichas_docente").select("id").eq("documento_identidad", doc).execute()
+        if existe_doc.data:
+            return {
+                "success": False,
+                "error": "Ya existe una ficha docente con este número de documento.",
+                "message": "Documento duplicado."
+            }
+
+        # Validar nombres_apellidos (solo letras y espacios)
+        nombres = ficha.get("nombres_apellidos", "").strip()
+        if nombres and not re.fullmatch(r"[A-Za-zÁÉÍÓÚáéíóúÑñ ]+", nombres):
+            return {
+                "success": False,
+                "error": "El campo nombres_apellidos solo debe contener letras y espacios.",
+                "message": "Nombre inválido."
+            }
+
+        # Validar celular
+        celular = ficha.get("celular")
+        if celular:
+            celular = str(celular)
+            if not celular.isdigit():
+                return {
+                    "success": False,
+                    "error": "El celular debe contener solo números.",
+                    "message": "Celular inválido."
+                }
+            if len(celular) != 10:
+                return {
+                    "success": False,
+                    "error": "El celular debe tener exactamente 10 dígitos.",
+                    "message": "Celular inválido."
+                }
+            if not celular.startswith("3"):
+                return {
+                    "success": False,
+                    "error": "El celular debe comenzar con '3'.",
+                    "message": "Celular inválido."
+                }
+
+        # Validar correo institucional
+        correo = ficha.get("correo_institucional", "").lower()
+        if not correo:
+            return {
+                "success": False,
+                "error": "El correo institucional es obligatorio.",
+                "message": "Debe ingresar un correo institucional."
+            }
+        if not correo.endswith("@unicesar.edu.co"):
+            return {
+                "success": False,
+                "error": "El correo institucional debe terminar en @unicesar.edu.co.",
+                "message": "Correo institucional inválido."
+            }
+
+        # Verificar duplicado de correo institucional
+        existe_correo = supabase.table("fichas_docente").select("id").eq("correo_institucional", correo).execute()
+        if existe_correo.data:
+            return {
+                "success": False,
+                "error": "Ya existe una ficha docente con este correo institucional.",
+                "message": "Correo duplicado."
+            }
+
+        # Filtrar campos válidos
         campos_validos = [
             "id", "nombres_apellidos", "documento_identidad", "fecha_nacimiento_dia", 
             "fecha_nacimiento_mes", "fecha_nacimiento_ano", "direccion_residencia", 
@@ -610,33 +701,26 @@ async def create_ficha_docente(ficha: Dict[str, Any]):
             "ciclo_formacion", "pregrado", "especializacion", "maestria", "doctorado", 
             "grupo_investigacion", "cual_grupo", "horas_semanales", "created_at", "updated_at"
         ]
-        
-        # Añadir timestamps si no están presentes
+
         if "created_at" not in ficha:
-            from datetime import datetime
             ficha["created_at"] = datetime.now().isoformat()
         if "updated_at" not in ficha:
-            from datetime import datetime
             ficha["updated_at"] = datetime.now().isoformat()
-            
-        # Filtrar solo los campos válidos
+
         ficha_filtrada = {k: v for k, v in ficha.items() if k in campos_validos}
-        
-        # Imprimir para depuración
-        print(f"Ficha original: {ficha}")
-        print(f"Ficha filtrada: {ficha_filtrada}")
-        
-        # Insertar la ficha filtrada
+
+        # Insertar en base de datos
         response = supabase.table("fichas_docente").insert(ficha_filtrada).execute()
         return response.data[0]
+
     except Exception as e:
         print(f"Error al crear ficha docente: {e}")
-        # Devolver un error más amigable y con información útil
         return {
             "success": False,
             "error": f"Error al crear ficha docente: {str(e)}",
             "message": "Hubo un problema al procesar la ficha docente. Por favor, verifique los campos e intente nuevamente."
         }
+
 
 # Endpoints para Intervenciones Grupales
 @router.get("/intervenciones-grupales", 
