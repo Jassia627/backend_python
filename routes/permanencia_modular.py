@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+import services.Funciones_validar as fv
 
 from services.permanencia_service import PermanenciaService
 from models.permanencia import (
@@ -42,13 +43,10 @@ async def create_tutoria_academica(datos: Dict[str, Any]):
     try:
         print(f"Recibiendo datos de tutoría: {datos}")
         
-        # Validar campos requeridos
-        if not datos.get("nivel_riesgo"):
-            return error_response("El nivel de riesgo es obligatorio", "El nivel de riesgo es obligatorio")
-            
-        if not datos.get("fecha_asignacion"):
-            return error_response("La fecha de asignación es obligatoria", "La fecha de asignación es obligatoria")
-        
+        errores = fv.validar_POA(datos)
+        if errores:
+            return error_response("Datos inválidos", errores)
+
         # Crear tutoría
         result = service.create_tutoria(datos)
         
@@ -82,15 +80,10 @@ async def create_asesoria_psicologica(datos: Dict[str, Any]):
         print(f"Recibiendo datos de asesoría psicológica: {datos}")
         
         # Validar campos requeridos
-        if not datos.get("motivo_intervencion"):
-            return error_response("El motivo de intervención es obligatorio", "El motivo de intervención es obligatorio")
-            
-        if not datos.get("tipo_intervencion"):
-            return error_response("El tipo de intervención es obligatorio", "El tipo de intervención es obligatorio")
-            
-        if not datos.get("fecha_atencion"):
-            return error_response("La fecha de atención es obligatoria", "La fecha de atención es obligatoria")
-        
+        errores = fv.validar_pops(datos)
+        if errores:
+            return error_response("Datos inválidos", errores)
+
         # Crear asesoría
         result = service.create_asesoria(datos)
         
@@ -124,15 +117,10 @@ async def create_orientacion_vocacional(datos: Dict[str, Any]):
         print(f"Recibiendo datos de orientación vocacional: {datos}")
         
         # Validar campos requeridos
-        if not datos.get("tipo_participante"):
-            return error_response("El tipo de participante es obligatorio", "El tipo de participante es obligatorio")
-            
-        if not datos.get("riesgo_spadies"):
-            return error_response("El riesgo SPADIES es obligatorio", "El riesgo SPADIES es obligatorio")
-            
-        if not datos.get("fecha_ingreso_programa"):
-            return error_response("La fecha de ingreso al programa es obligatoria", "La fecha de ingreso al programa es obligatoria")
-        
+        errores = fv.validar_povau(datos)
+        if errores:
+            return error_response("Datos inválidos", errores)
+
         # Crear orientación
         result = service.create_orientacion(datos)
         
@@ -166,17 +154,9 @@ async def create_comedor_universitario(datos: Dict[str, Any]):
         print(f"Recibiendo datos de comedor universitario: {datos}")
         
         # Validar campos requeridos
-        if not datos.get("condicion_socioeconomica"):
-            return error_response("La condición socioeconómica es obligatoria", "La condición socioeconómica es obligatoria")
-            
-        if not datos.get("fecha_solicitud"):
-            return error_response("La fecha de solicitud es obligatoria", "La fecha de solicitud es obligatoria")
-            
-        if not datos.get("tipo_comida"):
-            return error_response("El tipo de comida es obligatorio", "El tipo de comida es obligatorio")
-            
-        if not datos.get("raciones_asignadas"):
-            return error_response("Las raciones asignadas son obligatorias", "Las raciones asignadas son obligatorias")
+        errores = fv.validar_comedor_universitario(datos)
+        if errores:
+            return error_response("Datos inválidos", errores)
         
         # Crear registro de comedor
         result = service.create_comedor(datos)
@@ -211,9 +191,10 @@ async def create_apoyo_socioeconomico(datos: Dict[str, Any]):
         print(f"Recibiendo datos de apoyo socioeconómico: {datos}")
         
         # Validar campos requeridos
-        if not datos.get("tipo_vulnerabilidad"):
-            return error_response("El tipo de vulnerabilidad es obligatorio", "El tipo de vulnerabilidad es obligatorio")
-        
+        errores = fv.validar_apoyo_socioeconomico(datos)
+        if errores:
+            return error_response("Datos inválidos", errores)
+
         # Crear apoyo
         result = service.create_apoyo(datos)
         
@@ -247,12 +228,10 @@ async def create_taller_habilidades(datos: Dict[str, Any]):
         print(f"Recibiendo datos de taller de habilidades: {datos}")
         
         # Validar campos requeridos
-        if not datos.get("nombre_taller"):
-            return error_response("El nombre del taller es obligatorio", "El nombre del taller es obligatorio")
-            
-        if not datos.get("fecha_taller"):
-            return error_response("La fecha del taller es obligatoria", "La fecha del taller es obligatoria")
-        
+        errores = fv.validar_taller_habilidades(datos)
+        if errores:
+            return error_response("Datos inválidos", errores)
+
         # Crear taller
         result = service.create_taller(datos)
         
@@ -286,11 +265,9 @@ async def create_seguimiento_academico(datos: Dict[str, Any]):
         print(f"Recibiendo datos de seguimiento académico: {datos}")
         
         # Validar campos requeridos
-        if not datos.get("estado_participacion"):
-            return error_response("El estado de participación es obligatorio", "El estado de participación es obligatorio")
-            
-        if not datos.get("observaciones_permanencia"):
-            return error_response("Las observaciones de permanencia son obligatorias", "Las observaciones de permanencia son obligatorias")
+        errores = fv.validar_seguimiento_academico(datos)
+        if errores:
+            return error_response("Datos inválidos", errores)
         
         # Crear seguimiento
         result = service.create_seguimiento(datos)
