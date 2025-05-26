@@ -87,8 +87,8 @@ async def create_programa(datos: Dict[str, Any]):
 
         # Validar modalidad
         if "modalidad" in datos:
-           if datos["modalidad"] not in ["Presencial", "Virtual"]:
-            return error_response("La modalidad debe ser 'Presencial' o 'Virtual'", "Modalidad inválida")
+           if datos["modalidad"] not in ["Presencial", "Virtual", "Hibrido"]:
+            return error_response("La modalidad debe ser 'Presencial' o 'Virtual' o 'Hibrido'", "Modalidad inválida")
 
         # Validar estado
         if "estado" in datos:

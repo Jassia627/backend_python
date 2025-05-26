@@ -1,6 +1,10 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any, Optional
 from datetime import datetime
+import re
+import uuid
+from datetime import time
+
 
 from services.servicios_service import ServiciosService
 from models.servicios import (
@@ -12,6 +16,17 @@ from utils.responses import success_response, error_response, handle_exception
 router = APIRouter()
 service = ServiciosService()
 
+FACULTADES_UPC = [
+    "Facultad Ciencias Administrativas contables y económicas",
+    "Facultad de bellas artes",
+    "Facultad de derecho, ciencias políticas y sociales",
+    "Facultad DE Ciencias Básicas",
+    "Facultad ingenierías y tecnologías",
+    "Facultad Ciencias de la salud",
+    "Facultad DE Educación"
+]
+
+TIPOS_VALIDOS = ["Psicologia", "Tutoria", "Orientación", "Acompañamiento", "Seguimiento"]  
 # Endpoints para Servicios
 @router.get("/servicios", 
           summary="Obtener todos los servicios",
@@ -26,21 +41,7 @@ async def get_servicios():
     except Exception as e:
         return handle_exception(e, "obtener servicios")
 
-@router.get("/servicios/{id}", 
-          summary="Obtener un servicio por ID",
-          description="Retorna un servicio específico según su ID",
-          response_model=Dict[str, Any],
-          tags=["Servicios"])
-async def get_servicio(id: str):
-    """Obtiene un servicio por su ID."""
-    try:
-        servicio = service.get_servicio_by_id(id)
-        if not servicio:
-            return error_response(f"Servicio con ID {id} no encontrado", "Servicio no encontrado", 404)
-        
-        return success_response(servicio, "Servicio obtenido exitosamente")
-    except Exception as e:
-        return handle_exception(e, "obtener servicio")
+
 
 @router.post("/servicios", 
            summary="Crear un nuevo servicio",
@@ -51,15 +52,49 @@ async def create_servicio(datos: Dict[str, Any]):
     """Crea un nuevo servicio."""
     try:
         # Validar campos requeridos
+       
+            # Código
+        if not datos.get("codigo"):
+            return error_response("El código es obligatorio", "El código es obligatorio")
+        if not isinstance(datos["codigo"], str) or not re.match(r"^[A-Z]{3}-\d{3}$", datos["codigo"]):
+            return error_response("El código debe tener el formato ABC-123 (3 letras mayúsculas, guion y 3 números)", "Código inválido")
+
+        # Nombre
         if not datos.get("nombre"):
             return error_response("El nombre es obligatorio", "El nombre es obligatorio")
-            
+        if not isinstance(datos["nombre"], str) or not re.match(r"^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]{3,100}$", datos["nombre"]):
+            return error_response("El nombre debe contener solo letras y espacios (mínimo 3, máximo 100 caracteres)", "Nombre inválido")
+
+        # Facultad
+        if not datos.get("facultad"):
+            return error_response("La facultad es obligatoria", "La facultad es obligatoria")
+        if datos["facultad"] not in FACULTADES_UPC:
+            return error_response(f"La facultad '{datos['facultad']}' no es válida", "Facultad inválida")
+
+        # Nivel
+        if not datos.get("nivel"):
+            return error_response("El nivel es obligatorio", "El nivel es obligatorio")
+        if datos["nivel"] not in ["Pregrado", "Postgrado"]:
+            return error_response("El nivel debe ser 'Pregrado' o 'Postgrado'", "Nivel inválido")
+
+        # Modalidad
+        if not datos.get("modalidad"):
+            return error_response("La modalidad es obligatoria", "La modalidad es obligatoria")
+        if datos["modalidad"] not in ["Presencial", "Virtual", "Hibrido"]:
+            return error_response("La modalidad debe ser 'Presencial' o 'Virtual' o 'Hibrido' ", "Modalidad inválida")
+
+        # Descripción
         if not datos.get("descripcion"):
             return error_response("La descripción es obligatoria", "La descripción es obligatoria")
-            
+        if not isinstance(datos["descripcion"], str) or not (10 <= len(datos["descripcion"]) <= 255):
+            return error_response("La descripción debe tener entre 10 y 255 caracteres", "Descripción inválida")
+
+        # Tipo
         if not datos.get("tipo"):
             return error_response("El tipo es obligatorio", "El tipo es obligatorio")
-        
+        if datos["tipo"] not in TIPOS_VALIDOS:
+            return error_response(f"El tipo debe ser uno de: {', '.join(TIPOS_VALIDOS)}", "Tipo inválido")
+    
         # Crear servicio
         result = service.create_servicio(datos)
         
@@ -67,71 +102,7 @@ async def create_servicio(datos: Dict[str, Any]):
     except Exception as e:
         return handle_exception(e, "crear servicio")
 
-@router.put("/servicios/{id}", 
-          summary="Actualizar un servicio",
-          description="Actualiza los datos de un servicio existente",
-          response_model=Dict[str, Any],
-          tags=["Servicios"])
-async def update_servicio(id: str, datos: Dict[str, Any]):
-    """Actualiza un servicio existente."""
-    try:
-        # Verificar si el servicio existe
-        servicio_existente = service.get_servicio_by_id(id)
-        if not servicio_existente:
-            return error_response(f"Servicio con ID {id} no encontrado", "Servicio no encontrado", 404)
-        
-        # Actualizar servicio
-        result = service.update_servicio(id, datos)
-        
-        return success_response(result, "Servicio actualizado exitosamente")
-    except Exception as e:
-        return handle_exception(e, "actualizar servicio")
 
-@router.delete("/servicios/{id}", 
-             summary="Eliminar un servicio",
-             description="Elimina un servicio existente",
-             response_model=Dict[str, Any],
-             tags=["Servicios"])
-async def delete_servicio(id: str):
-    """Elimina un servicio existente."""
-    try:
-        # Verificar si el servicio existe
-        servicio_existente = service.get_servicio_by_id(id)
-        if not servicio_existente:
-            return error_response(f"Servicio con ID {id} no encontrado", "Servicio no encontrado", 404)
-        
-        # Eliminar servicio
-        result = service.delete_servicio(id)
-        
-        return success_response(result, "Servicio eliminado exitosamente")
-    except Exception as e:
-        return handle_exception(e, "eliminar servicio")
-
-@router.get("/servicios/tipo/{tipo}", 
-          summary="Buscar servicios por tipo",
-          description="Busca servicios por tipo",
-          response_model=Dict[str, Any],
-          tags=["Servicios"])
-async def get_servicios_by_tipo(tipo: str):
-    """Busca servicios por tipo."""
-    try:
-        servicios = service.get_servicios_by_tipo(tipo)
-        return success_response(servicios, "Servicios encontrados exitosamente")
-    except Exception as e:
-        return handle_exception(e, "buscar servicios por tipo")
-
-@router.get("/servicios/activos", 
-          summary="Obtener servicios activos",
-          description="Retorna una lista de todos los servicios activos",
-          response_model=Dict[str, Any],
-          tags=["Servicios"])
-async def get_servicios_activos():
-    """Obtiene todos los servicios activos."""
-    try:
-        servicios = service.get_servicios_activos()
-        return success_response(servicios, "Servicios activos obtenidos exitosamente")
-    except Exception as e:
-        return handle_exception(e, "obtener servicios activos")
 
 # Endpoints para Asistencias
 @router.get("/asistencias", 
@@ -147,21 +118,7 @@ async def get_asistencias():
     except Exception as e:
         return handle_exception(e, "obtener asistencias")
 
-@router.get("/asistencias/{id}", 
-          summary="Obtener una asistencia por ID",
-          description="Retorna una asistencia específica según su ID",
-          response_model=Dict[str, Any],
-          tags=["Asistencias"])
-async def get_asistencia(id: str):
-    """Obtiene una asistencia por su ID."""
-    try:
-        asistencia = service.asistencias_data.get_by_id(id)
-        if not asistencia:
-            return error_response(f"Asistencia con ID {id} no encontrada", "Asistencia no encontrada", 404)
-        
-        return success_response(asistencia, "Asistencia obtenida exitosamente")
-    except Exception as e:
-        return handle_exception(e, "obtener asistencia")
+
 
 @router.post("/asistencias", 
            summary="Crear una nueva asistencia",
@@ -171,16 +128,64 @@ async def get_asistencia(id: str):
 async def create_asistencia(datos: Dict[str, Any]):
     """Crea una nueva asistencia."""
     try:
-        # Validar campos requeridos
+                # Validar campos requeridos
+         # Validar estudiante_id
         if not datos.get("estudiante_id"):
             return error_response("El ID del estudiante es obligatorio", "El ID del estudiante es obligatorio")
-            
+        try:
+            uuid.UUID(datos["estudiante_id"])
+        except ValueError:
+            return error_response("El ID del estudiante debe ser un UUID válido", "ID inválido")
+
+        # Validar servicio_id
         if not datos.get("servicio_id"):
             return error_response("El ID del servicio es obligatorio", "El ID del servicio es obligatorio")
-            
+        try:
+            uuid.UUID(datos["servicio_id"])
+        except ValueError:
+            return error_response("El ID del servicio debe ser un UUID válido", "ID inválido")
+
+        # Validar actividad
+        if not datos.get("actividad"):
+            return error_response("La actividad es obligatoria", "La actividad es obligatoria")
+        if not isinstance(datos["actividad"], str) or not (5 <= len(datos["actividad"]) <= 100):
+            return error_response("La actividad debe tener entre 5 y 100 caracteres", "Actividad inválida")
+
+        # Validar fecha
         if not datos.get("fecha"):
             return error_response("La fecha es obligatoria", "La fecha es obligatoria")
-        
+        try:
+            datetime.strptime(datos["fecha"], "%Y-%m-%d")
+        except ValueError:
+            return error_response("La fecha debe tener el formato YYYY-MM-DD", "Fecha inválida")
+
+        # Validar hora_inicio
+        if not datos.get("hora_inicio"):
+            return error_response("La hora de inicio es obligatoria", "La hora de inicio es obligatoria")
+        try:
+            time.fromisoformat(datos["hora_inicio"])
+        except ValueError:
+            return error_response("La hora de inicio debe tener el formato HH:MM:SS", "Hora de inicio inválida")
+
+        # Validar hora_fin
+        if not datos.get("hora_fin"):
+            return error_response("La hora de finalización es obligatoria", "La hora de finalización es obligatoria")
+        try:
+            time.fromisoformat(datos["hora_fin"])
+        except ValueError:
+            return error_response("La hora de finalización debe tener el formato HH:MM:SS", "Hora de finalización inválida")
+
+        # Validar asistió
+        if "asistio" in datos and not isinstance(datos["asistio"], bool):
+            return error_response("El campo 'asistio' debe ser un valor booleano (true o false)", "Valor inválido en 'asistio'")
+
+        # Validar observaciones (opcional)
+        if "observaciones" in datos:
+            if not isinstance(datos["observaciones"], str):
+                return error_response("Las observaciones deben ser texto", "Observaciones inválidas")
+            if len(datos["observaciones"]) > 255:
+                return error_response("Las observaciones no deben superar los 255 caracteres", "Observaciones demasiado largas")
+
         # Crear asistencia
         result = service.create_asistencia(datos)
         
@@ -188,44 +193,9 @@ async def create_asistencia(datos: Dict[str, Any]):
     except Exception as e:
         return handle_exception(e, "crear asistencia")
 
-@router.get("/asistencias/estudiante/{estudiante_id}", 
-          summary="Buscar asistencias por estudiante",
-          description="Busca asistencias por estudiante",
-          response_model=Dict[str, Any],
-          tags=["Asistencias"])
-async def get_asistencias_by_estudiante(estudiante_id: str):
-    """Busca asistencias por estudiante."""
-    try:
-        asistencias = service.get_asistencias_by_estudiante(estudiante_id)
-        return success_response(asistencias, "Asistencias encontradas exitosamente")
-    except Exception as e:
-        return handle_exception(e, "buscar asistencias por estudiante")
 
-@router.get("/asistencias/servicio/{servicio_id}", 
-          summary="Buscar asistencias por servicio",
-          description="Busca asistencias por servicio",
-          response_model=Dict[str, Any],
-          tags=["Asistencias"])
-async def get_asistencias_by_servicio(servicio_id: str):
-    """Busca asistencias por servicio."""
-    try:
-        asistencias = service.get_asistencias_by_servicio(servicio_id)
-        return success_response(asistencias, "Asistencias encontradas exitosamente")
-    except Exception as e:
-        return handle_exception(e, "buscar asistencias por servicio")
 
-@router.get("/asistencias/fecha", 
-          summary="Buscar asistencias por rango de fechas",
-          description="Busca asistencias por rango de fechas",
-          response_model=Dict[str, Any],
-          tags=["Asistencias"])
-async def get_asistencias_by_fecha(fecha_inicio: str, fecha_fin: str):
-    """Busca asistencias por rango de fechas."""
-    try:
-        asistencias = service.get_asistencias_by_fecha(fecha_inicio, fecha_fin)
-        return success_response(asistencias, "Asistencias encontradas exitosamente")
-    except Exception as e:
-        return handle_exception(e, "buscar asistencias por fecha")
+
 
 # Endpoints para Software Solicitudes
 @router.get("/software-solicitudes", 
