@@ -69,32 +69,3 @@ async def create_acta_negacion(acta: Dict[str, Any]):
         print(f"Error al crear acta de negación: {e}")
         raise HTTPException(status_code=500, detail=f"Error al crear acta de negación: {str(e)}")
 
-@router.get("/actas-negacion/{acta_id}", 
-          summary="Obtener un acta de negación por ID",
-          description="Retorna los datos de un acta de negación específica",
-          response_model=Dict[str, Any])
-async def get_acta_negacion(acta_id: str):
-    """Obtiene un acta de negación por su ID."""
-    try:
-        response = supabase.table("actas_negacion").select("*").eq("id", acta_id).execute()
-        if not response.data:
-            raise HTTPException(status_code=404, detail=f"Acta de negación con ID {acta_id} no encontrada")
-        return response.data[0]
-    except Exception as e:
-        print(f"Error al obtener acta de negación: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al obtener acta de negación: {str(e)}")
-
-@router.delete("/actas-negacion/{acta_id}", 
-             summary="Eliminar un acta de negación",
-             description="Elimina un acta de negación específica",
-             response_model=Dict[str, Any])
-async def delete_acta_negacion(acta_id: str):
-    """Elimina un acta de negación."""
-    try:
-        response = supabase.table("actas_negacion").delete().eq("id", acta_id).execute()
-        if not response.data:
-            raise HTTPException(status_code=404, detail=f"Acta de negación con ID {acta_id} no encontrada")
-        return {"message": "Acta de negación eliminada correctamente", "id": acta_id}
-    except Exception as e:
-        print(f"Error al eliminar acta de negación: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al eliminar acta de negación: {str(e)}")

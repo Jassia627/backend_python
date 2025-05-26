@@ -7,6 +7,7 @@ CREATE TABLE public.intervenciones_grupales (
     id uuid NOT NULL DEFAULT extensions.uuid_generate_v4(),
     estudiante_id uuid REFERENCES estudiantes(id) ON DELETE SET NULL,
     fecha_solicitud DATE NOT NULL,
+    fecha_recepcion DATE,
     nombre_docente_permanencia VARCHAR(200) NOT NULL,
     celular_permanencia VARCHAR(20) NOT NULL,
     correo_permanencia VARCHAR(100) NOT NULL,

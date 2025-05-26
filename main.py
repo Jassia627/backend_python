@@ -20,6 +20,7 @@ from routes.actas import router as actas_router
 from routes.permanencia_modular import router as permanencia_router
 from routes.intervenciones_grupales import router as intervenciones_grupales_router
 from routes.importar_intervenciones import router as importar_intervenciones_router
+from routes.uploads import router as uploads_router
 
 # Inicializar FastAPI
 app = FastAPI(
@@ -51,7 +52,6 @@ async def get_open_api_endpoint():
     )
 
 # Incluir todos los routers
-app.include_router(usuarios_router, prefix="/api", tags=["Usuarios"])
 app.include_router(programas_router, prefix="/api", tags=["Programas"])
 app.include_router(estudiantes_router, prefix="/api", tags=["Estudiantes"])
 app.include_router(servicios_router, prefix="/api", tags=["Servicios"])
@@ -61,6 +61,7 @@ app.include_router(actas_router, prefix="/api", tags=["Actas"])
 app.include_router(permanencia_router, prefix="/api", tags=["Servicios de Permanencia"])
 app.include_router(intervenciones_grupales_router, prefix="/api", tags=["Intervenciones Grupales"])
 app.include_router(importar_intervenciones_router, prefix="/api", tags=["Importación de Intervenciones"])
+app.include_router(uploads_router, prefix="/api", tags=["Importación de Datos"])
 
 # Ruta raíz
 @app.get("/", tags=["Root"])

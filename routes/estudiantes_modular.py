@@ -25,20 +25,6 @@ async def get_estudiantes():
     except Exception as e:
         return handle_exception(e, "obtener estudiantes")
 
-@router.get("/estudiantes/{id}", 
-          summary="Obtener un estudiante por ID",
-          description="Retorna un estudiante específico según su ID",
-          response_model=Dict[str, Any],
-          tags=["Estudiantes"])
-async def get_estudiante(id: str):
-    try:
-        estudiante = service.get_estudiante_by_id(id)
-        if not estudiante:
-            return error_response(f"Estudiante con ID {id} no encontrado", "Estudiante no encontrado", 404)
-        
-        return success_response(estudiante, "Estudiante obtenido exitosamente")
-    except Exception as e:
-        return handle_exception(e, "obtener estudiante")
 
 @router.post("/estudiantes", 
            summary="Crear un nuevo estudiante",
@@ -115,59 +101,4 @@ async def create_estudiante(datos: Dict[str, Any]):
     except Exception as e:
         return handle_exception(e, "crear estudiante")
 
-@router.put("/estudiantes/{id}", 
-          summary="Actualizar un estudiante",
-          description="Actualiza los datos de un estudiante existente",
-          response_model=Dict[str, Any],
-          tags=["Estudiantes"])
-async def update_estudiante(id: str, datos: Dict[str, Any]):
-    try:
-        estudiante_existente = service.get_estudiante_by_id(id)
-        if not estudiante_existente:
-            return error_response(f"Estudiante con ID {id} no encontrado", "Estudiante no encontrado", 404)
 
-        result = service.update_estudiante(id, datos)
-        return success_response(result, "Estudiante actualizado exitosamente")
-    except Exception as e:
-        return handle_exception(e, "actualizar estudiante")
-
-@router.delete("/estudiantes/{id}", 
-             summary="Eliminar un estudiante",
-             description="Elimina un estudiante existente",
-             response_model=Dict[str, Any],
-             tags=["Estudiantes"])
-async def delete_estudiante(id: str):
-    try:
-        estudiante_existente = service.get_estudiante_by_id(id)
-        if not estudiante_existente:
-            return error_response(f"Estudiante con ID {id} no encontrado", "Estudiante no encontrado", 404)
-
-        result = service.delete_estudiante(id)
-        return success_response(result, "Estudiante eliminado exitosamente")
-    except Exception as e:
-        return handle_exception(e, "eliminar estudiante")
-
-@router.post("/estudiantes/buscar-o-crear", 
-           summary="Buscar o crear estudiante",
-           description="Busca un estudiante por documento o lo crea si no existe",
-           response_model=Dict[str, Any],
-           tags=["Estudiantes"])
-async def buscar_o_crear_estudiante(datos: Dict[str, Any]):
-    try:
-        if not datos.get("documento"):
-            return error_response("El número de documento es obligatorio", "El número de documento es obligatorio")
-        if not datos.get("tipo_documento"):
-            return error_response("El tipo de documento es obligatorio", "El tipo de documento es obligatorio")
-
-        # Validaciones opcionales
-        doc = datos["documento"]
-        if not doc.isdigit() or not (7 <= len(doc) <= 10):
-            return error_response("El número de documento debe ser numérico y tener entre 7 y 10 dígitos", "Documento inválido")
-
-        if not datos["tipo_documento"].isalpha():
-            return error_response("El tipo de documento debe contener solo letras", "Tipo de documento inválido")
-
-        result = service.buscar_o_crear_estudiante(datos)
-        return success_response(result, "Operación realizada exitosamente")
-    except Exception as e:
-        return handle_exception(e, "buscar o crear estudiante")

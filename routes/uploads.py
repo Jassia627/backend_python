@@ -3,9 +3,8 @@ from typing import Dict, Any, List
 import io
 import pandas as pd
 import uuid
-import datetime
 import traceback
-from datetime import datetime as dt
+from datetime import datetime
 
 from config import supabase
 
@@ -18,7 +17,7 @@ def convert_date_format(date_str):
         formats = ['%d-%m-%Y', '%d/%m/%Y', '%d-%b-%Y', '%d %b %Y']
         for fmt in formats:
             try:
-                date_obj = dt.strptime(str(date_str), fmt)
+                date_obj = datetime.strptime(str(date_str), fmt)
                 return date_obj.strftime('%Y-%m-%d')
             except ValueError:
                 continue
@@ -270,12 +269,38 @@ async def upload_csv(file: UploadFile = File(...), tipo: str = None):
                     # 7. Procesar datos de Intervención Grupal si corresponde
                     if "IntervencionGrupal_fecha_solicitud" in row and pd.notna(row["IntervencionGrupal_fecha_solicitud"]) and estudiante_id:
                         try:
+                            # Crear un diccionario con todos los campos posibles de intervenciones grupales
                             intervencion_data = {
                                 "estudiante_id": estudiante_id,
-                                "fecha_solicitud": convert_date_format(row["IntervencionGrupal_fecha_solicitud"]),
-                                "fecha_recepcion": convert_date_format(row["IntervencionGrupal_fecha_recepcion"]) if pd.notna(row["IntervencionGrupal_fecha_recepcion"]) else None,
-                                "estado": str(row["IntervencionGrupal_estado_solicitud"]) if pd.notna(row["IntervencionGrupal_estado_solicitud"]) else "pendiente"
+                                "fecha_solicitud": convert_date_format(row["IntervencionGrupal_fecha_solicitud"]) or datetime.now().strftime('%Y-%m-%d'),
+                                "fecha_recepcion": convert_date_format(row["IntervencionGrupal_fecha_recepcion"]) if pd.notna(row.get("IntervencionGrupal_fecha_recepcion")) else None,
+                                "nombre_docente_permanencia": str(row["IntervencionGrupal_nombre_docente_permanencia"]) if pd.notna(row.get("IntervencionGrupal_nombre_docente_permanencia")) else "Docente por defecto",
+                                "celular_permanencia": str(row["IntervencionGrupal_celular_permanencia"]) if pd.notna(row.get("IntervencionGrupal_celular_permanencia")) else "0000000000",
+                                "correo_permanencia": str(row["IntervencionGrupal_correo_permanencia"]) if pd.notna(row.get("IntervencionGrupal_correo_permanencia")) else f"permanencia_{estudiante_id}@ejemplo.com",
+                                "estudiante_programa_academico_permanencia": str(row["IntervencionGrupal_programa_permanencia"]) if pd.notna(row.get("IntervencionGrupal_programa_permanencia")) else programa_academico or "Programa no especificado",
+                                "tipo_poblacion": str(row["IntervencionGrupal_tipo_poblacion"]) if pd.notna(row.get("IntervencionGrupal_tipo_poblacion")) else "General",
+                                "nombre_docente_asignatura": str(row["IntervencionGrupal_nombre_docente_asignatura"]) if pd.notna(row.get("IntervencionGrupal_nombre_docente_asignatura")) else "Docente asignatura",
+                                "celular_docente_asignatura": str(row["IntervencionGrupal_celular_docente_asignatura"]) if pd.notna(row.get("IntervencionGrupal_celular_docente_asignatura")) else "0000000000",
+                                "correo_docente_asignatura": str(row["IntervencionGrupal_correo_docente_asignatura"]) if pd.notna(row.get("IntervencionGrupal_correo_docente_asignatura")) else f"docente_{estudiante_id}@ejemplo.com",
+                                "estudiante_programa_academico_docente_asignatura": str(row["IntervencionGrupal_programa_docente_asignatura"]) if pd.notna(row.get("IntervencionGrupal_programa_docente_asignatura")) else programa_academico or "Programa no especificado",
+                                "asignatura_intervenir": str(row["IntervencionGrupal_asignatura_intervenir"]) if pd.notna(row.get("IntervencionGrupal_asignatura_intervenir")) else "Asignatura general",
+                                "grupo": str(row["IntervencionGrupal_grupo"]) if pd.notna(row.get("IntervencionGrupal_grupo")) else "1",
+                                "semestre": str(row["IntervencionGrupal_semestre"]) if pd.notna(row.get("IntervencionGrupal_semestre")) else str(row.get("estudiante_semestre", "1")) if pd.notna(row.get("estudiante_semestre")) else "1",
+                                "numero_estudiantes": str(row["IntervencionGrupal_numero_estudiantes"]) if pd.notna(row.get("IntervencionGrupal_numero_estudiantes")) else "1",
+                                "tematica_sugerida": str(row["IntervencionGrupal_tematica_sugerida"]) if pd.notna(row.get("IntervencionGrupal_tematica_sugerida")) else None,
+                                "fecha_estudiante_programa_academicoda": convert_date_format(row["IntervencionGrupal_fecha_programada"]) if pd.notna(row.get("IntervencionGrupal_fecha_programada")) else datetime.now().strftime('%Y-%m-%d'),
+                                "hora": str(row["IntervencionGrupal_hora"]) if pd.notna(row.get("IntervencionGrupal_hora")) else "08:00",
+                                "aula": str(row["IntervencionGrupal_aula"]) if pd.notna(row.get("IntervencionGrupal_aula")) else "Aula por asignar",
+                                "bloque": str(row["IntervencionGrupal_bloque"]) if pd.notna(row.get("IntervencionGrupal_bloque")) else "Bloque por asignar",
+                                "sede": str(row["IntervencionGrupal_sede"]) if pd.notna(row.get("IntervencionGrupal_sede")) else "Sede principal",
+                                "estado": str(row["IntervencionGrupal_estado"]) if pd.notna(row.get("IntervencionGrupal_estado")) else "espera",
+                                "motivo": str(row["IntervencionGrupal_motivo"]) if pd.notna(row.get("IntervencionGrupal_motivo")) else None,
+                                "efectividad": str(row["IntervencionGrupal_efectividad"]) if pd.notna(row.get("IntervencionGrupal_efectividad")) else "Pendiente evaluación"
                             }
+                            
+                            # Si el estado no es "se hizo" y no hay motivo, establecer un motivo por defecto
+                            if intervencion_data.get("estado") != "se hizo" and not intervencion_data.get("motivo"):
+                                intervencion_data["motivo"] = "Importado desde CSV"
                             
                             # Insertar la intervención grupal
                             print(f"Creando intervención grupal: {intervencion_data}")
