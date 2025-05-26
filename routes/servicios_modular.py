@@ -505,43 +505,89 @@ async def create_asistencia_actividad(asistencia: Dict[str, Any]):
     """Crea una nueva asistencia a actividad."""
     try:
         from config import supabase
-        
+        import re
+
+        if "nombre_estudiante" in asistencia:
+            if not re.fullmatch(r"[A-Za-zÁÉÍÓÚáéíóúÑñ ]+", asistencia["estudiante_programa_academico"]):
+                raise ValueError("El campo 'estudiante_programa_academico' debe contener solo letras y espacios.")
+
+        if "numero_documento" in asistencia:
+            if not str(asistencia["numero_documento"]).isdigit():
+                raise ValueError("El campo 'numero_documento' debe contener solo números.")
+            if not 7 <= len(str(asistencia["numero_documento"])) <= 10:
+                raise ValueError("El campo 'numero_documento' debe tener entre 7 y 10 dígitos.")
+
+        if "estudiante_programa_academico" in asistencia:
+            if not re.fullmatch(r"[A-Za-zÁÉÍÓÚáéíóúÑñ ]+", asistencia["estudiante_programa_academico"]):
+                raise ValueError("El campo 'estudiante_programa_academico' debe contener solo letras y espacios.")
+
+        if "estudiante_programa_academico_academico" in asistencia:
+            if not re.fullmatch(r"[A-Za-zÁÉÍÓÚáéíóúÑñ ]+", asistencia["estudiante_programa_academico_academico"]):
+                raise ValueError("El campo 'estudiante_programa_academico_academico' debe contener solo letras y espacios.")
+
+        if "semestre" in asistencia:
+            if not str(asistencia["semestre"]).isdigit() or int(asistencia["semestre"]) <= 0:
+                raise ValueError("El campo 'semestre' debe ser un número mayor a 0.")
+
+        if "nombre_actividad" in asistencia:
+            if not re.fullmatch(r"[A-Za-zÁÉÍÓÚáéíóúÑñ ]+", asistencia["estudiante_programa_academico_academico"]):
+                raise ValueError("El campo 'estudiante_programa_academico_academico' debe contener solo letras y espacios.")
+
+        if "modalidad" in asistencia and asistencia["modalidad"] not in ["Virtual", "Presencial", "Híbrida"]:
+            raise ValueError("El campo 'modalidad' solo puede ser 'Virtual', 'Presencial' o 'Híbrida'.")
+
+        if "tipo_actividad" in asistencia and not asistencia["tipo_actividad"].isalpha():
+            raise ValueError("El campo 'tipo_actividad' debe contener solo letras.")
+
+        if "fecha_actividad" in asistencia:
+            if not re.match(r"^\d{2}/\d{2}/\d{4}$", asistencia["fecha_actividad"]):
+                raise ValueError("El campo 'fecha_actividad' debe tener el formato dd/mm/yyyy.")
+
+        if "hora_inicio" in asistencia:
+            if not re.match(r"^\d{2}:\d{2}$", asistencia["hora_inicio"]):
+                raise ValueError("El campo 'hora_inicio' debe tener el formato HH:MM.")
+
+        if "hora_fin" in asistencia:
+            if not re.match(r"^\d{2}:\d{2}$", asistencia["hora_fin"]):
+                raise ValueError("El campo 'hora_fin' debe tener el formato HH:MM.")
+
+        if "modalidad_registro" in asistencia and asistencia["modalidad_registro"] not in ["Manual", "Digital"]:
+            raise ValueError("El campo 'modalidad_registro' solo puede ser 'Manual' o 'Digital'.")
+
+        if "observaciones" in asistencia:
+            if not re.match(r"^[\w\s.,;:¡!¿?@#$%&()\-+=/\\]$", asistencia["observaciones"]):
+                raise ValueError("El campo 'observaciones' contiene caracteres no permitidos.")
+
         # Manejar el campo estudiante_programa_academico_academico
         if "estudiante_programa_academico_academico" in asistencia:
-            # Asegurarse de que también exista el campo estudiante_programa_academico
             asistencia["estudiante_programa_academico"] = asistencia["estudiante_programa_academico_academico"]
-        
+
         # Buscar estudiante por número de documento si está disponible
         if "numero_documento" in asistencia and "estudiante_id" not in asistencia:
             estudiante = supabase.table("estudiantes").select("id").eq("documento", asistencia["numero_documento"]).execute()
             if estudiante.data and len(estudiante.data) > 0:
                 asistencia["estudiante_id"] = estudiante.data[0]["id"]
             else:
-                # Si no se encuentra el estudiante, establecer estudiante_id como NULL
                 asistencia["estudiante_id"] = None
-        
-        # Filtrar los campos que existen en la tabla para evitar errores
+
         campos_validos = [
-            "id", "estudiante_id", "nombre_estudiante", "numero_documento", 
-            "estudiante_programa_academico", "estudiante_programa_academico_academico", 
-            "semestre", "nombre_actividad", "modalidad", "tipo_actividad", 
-            "fecha_actividad", "hora_inicio", "hora_fin", "modalidad_registro", 
+            "id", "estudiante_id", "nombre_estudiante", "numero_documento",
+            "estudiante_programa_academico", "estudiante_programa_academico_academico",
+            "semestre", "nombre_actividad", "modalidad", "tipo_actividad",
+            "fecha_actividad", "hora_inicio", "hora_fin", "modalidad_registro",
             "observaciones", "created_at", "updated_at"
         ]
-        
-        # Filtrar solo los campos válidos
+
         asistencia_filtrada = {k: v for k, v in asistencia.items() if k in campos_validos}
-        
-        # Añadir timestamps
+
         if "created_at" not in asistencia_filtrada:
             asistencia_filtrada["created_at"] = datetime.now().isoformat()
         if "updated_at" not in asistencia_filtrada:
             asistencia_filtrada["updated_at"] = datetime.now().isoformat()
-        
-        # Imprimir para depuración
+
         print(f"Asistencia original: {asistencia}")
         print(f"Asistencia filtrada: {asistencia_filtrada}")
-        
+
         response = supabase.table("asistencias_actividades").insert(asistencia_filtrada).execute()
         return response.data[0]
     except Exception as e:
