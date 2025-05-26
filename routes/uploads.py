@@ -113,7 +113,8 @@ async def upload_csv(file: UploadFile = File(...), tipo: str = None):
                                 nuevo_programa = {
                                     "nombre": programa_academico,
                                     "facultad": "Sin asignar",
-                                    "codigo": f"PROG-{len(programa_academico)}-{str(uuid.uuid4())[:8]}"
+                                    "codigo": f"PROG-{len(programa_academico)}-{str(uuid.uuid4())[:8]}",
+                                    "nivel": "Pregrado"  # Valor por defecto para el campo obligatorio
                                 }
                                 programa_response = supabase.table("programas").insert(nuevo_programa).execute()
                                 programa_id = programa_response.data[0]["id"]

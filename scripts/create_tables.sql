@@ -18,6 +18,7 @@ DROP TABLE IF EXISTS seguimientos_academicos CASCADE;
 DROP TABLE IF EXISTS formatos_asistencia CASCADE;
 DROP TABLE IF EXISTS asistencias CASCADE;
 DROP TABLE IF EXISTS tutorias_academicas CASCADE;
+DROP TABLE IF EXISTS programas CASCADE;
 
 -- Ahora creamos las tablas con las relaciones correctas
 
@@ -49,6 +50,7 @@ CREATE TABLE IF NOT EXISTS comedores_universitarios (
     condicion_socioeconomica VARCHAR(50) NOT NULL,
     fecha_solicitud DATE,
     aprobado BOOLEAN DEFAULT FALSE,
+    observaciones TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -101,10 +103,13 @@ CREATE TABLE IF NOT EXISTS remisiones_psicologicas (
 CREATE TABLE IF NOT EXISTS asesorias_psicologicas (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     estudiante_id UUID NOT NULL REFERENCES estudiantes(id) ON DELETE CASCADE,
-    fecha_asesoria DATE NOT NULL,
-    tipo_asesoria VARCHAR(100) DEFAULT 'general',
-    observaciones TEXT,
+    motivo_consulta TEXT,
+    motivo_intervencion TEXT,
+    tipo_intervencion VARCHAR(100),
+    fecha DATE NOT NULL,
+    fecha_atencion DATE,
     psicologo VARCHAR(200),
+    seguimiento TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -114,6 +119,7 @@ CREATE TABLE IF NOT EXISTS orientaciones_vocacionales (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     estudiante_id UUID NOT NULL REFERENCES estudiantes(id) ON DELETE CASCADE,
     fecha_orientacion DATE NOT NULL,
+    fecha_ingreso_programa DATE,
     area_interes VARCHAR(100),
     resultado TEXT,
     orientador VARCHAR(200),
@@ -130,6 +136,7 @@ CREATE TABLE IF NOT EXISTS apoyos_socioeconomicos (
     fecha_otorgamiento DATE NOT NULL,
     fecha_finalizacion DATE,
     estado VARCHAR(50) DEFAULT 'activo',
+    tipo_vulnerabilidad VARCHAR(100),
     observaciones TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -142,6 +149,7 @@ CREATE TABLE IF NOT EXISTS talleres_habilidades (
     nombre_taller VARCHAR(200) NOT NULL,
     fecha_inicio DATE NOT NULL,
     fecha_fin DATE,
+    fecha_taller DATE,
     horas_completadas INTEGER DEFAULT 0,
     certificado BOOLEAN DEFAULT FALSE,
     facilitador VARCHAR(200),
@@ -160,6 +168,7 @@ CREATE TABLE IF NOT EXISTS seguimientos_academicos (
     materias_cursadas INTEGER DEFAULT 0,
     observaciones TEXT,
     requiere_tutoria BOOLEAN DEFAULT FALSE,
+    estado_participacion VARCHAR(50),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -188,14 +197,32 @@ CREATE TABLE IF NOT EXISTS asistencias (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Tabla Programas Académicos
+CREATE TABLE IF NOT EXISTS programas (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    codigo VARCHAR(20) NOT NULL UNIQUE,
+    nombre VARCHAR(200) NOT NULL,
+    facultad VARCHAR(100) NOT NULL,
+    nivel VARCHAR(50) NOT NULL,
+    modalidad VARCHAR(50),
+    estado BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Tabla Tutorías Académicas
 CREATE TABLE IF NOT EXISTS tutorias_academicas (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     estudiante_id UUID NOT NULL REFERENCES estudiantes(id) ON DELETE CASCADE,
-    fecha_tutoria DATE NOT NULL,
-    asignatura VARCHAR(200),
+    asignatura VARCHAR(100),
+    fecha_tutoria DATE,
+    fecha_asignacion DATE,
+    hora_inicio TIME,
+    hora_fin TIME,
     tutor VARCHAR(200),
-    observaciones TEXT,
+    acciones_apoyo TEXT,
+    nivel_riesgo VARCHAR(50),
+    requiere_tutoria BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -235,5 +262,7 @@ CREATE INDEX IF NOT EXISTS idx_seguimientos_estudiante_id ON seguimientos_academ
 CREATE INDEX IF NOT EXISTS idx_asistencia_estudiante_id ON formatos_asistencia(estudiante_id);
 CREATE INDEX IF NOT EXISTS idx_asistencias_estudiante_id ON asistencias(estudiante_id);
 CREATE INDEX IF NOT EXISTS idx_tutorias_estudiante_id ON tutorias_academicas(estudiante_id);
+CREATE INDEX IF NOT EXISTS idx_programas_codigo ON programas(codigo);
+CREATE INDEX IF NOT EXISTS idx_programas_facultad ON programas(facultad);
 CREATE INDEX IF NOT EXISTS idx_permanencia_servicio ON permanencia(servicio);
 CREATE INDEX IF NOT EXISTS idx_permanencia_programa ON permanencia(estudiante_programa_academico);
