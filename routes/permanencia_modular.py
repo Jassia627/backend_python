@@ -42,7 +42,11 @@ async def create_tutoria_academica(datos: Dict[str, Any]):
     """Crea una nueva tutoría académica."""
     try:
         print(f"Recibiendo datos de tutoría: {datos}")
+<<<<<<< HEAD
+        # funcion de validacion de datos
+=======
         
+>>>>>>> 7d306b56a16be3d40704e76a6e7ec2bdd04cf0fd
         errores = fv.validar_POA(datos)
         if errores:
             return error_response("Datos inválidos", errores)
@@ -79,7 +83,10 @@ async def create_asesoria_psicologica(datos: Dict[str, Any]):
     try:
         print(f"Recibiendo datos de asesoría psicológica: {datos}")
         
+<<<<<<< HEAD
+=======
         # Validar campos requeridos
+>>>>>>> 7d306b56a16be3d40704e76a6e7ec2bdd04cf0fd
         errores = fv.validar_pops(datos)
         if errores:
             return error_response("Datos inválidos", errores)
@@ -116,7 +123,10 @@ async def create_orientacion_vocacional(datos: Dict[str, Any]):
     try:
         print(f"Recibiendo datos de orientación vocacional: {datos}")
         
+<<<<<<< HEAD
+=======
         # Validar campos requeridos
+>>>>>>> 7d306b56a16be3d40704e76a6e7ec2bdd04cf0fd
         errores = fv.validar_povau(datos)
         if errores:
             return error_response("Datos inválidos", errores)
@@ -153,7 +163,10 @@ async def create_comedor_universitario(datos: Dict[str, Any]):
     try:
         print(f"Recibiendo datos de comedor universitario: {datos}")
         
+<<<<<<< HEAD
+=======
         # Validar campos requeridos
+>>>>>>> 7d306b56a16be3d40704e76a6e7ec2bdd04cf0fd
         errores = fv.validar_comedor_universitario(datos)
         if errores:
             return error_response("Datos inválidos", errores)
@@ -190,7 +203,10 @@ async def create_apoyo_socioeconomico(datos: Dict[str, Any]):
     try:
         print(f"Recibiendo datos de apoyo socioeconómico: {datos}")
         
+<<<<<<< HEAD
+=======
         # Validar campos requeridos
+>>>>>>> 7d306b56a16be3d40704e76a6e7ec2bdd04cf0fd
         errores = fv.validar_apoyo_socioeconomico(datos)
         if errores:
             return error_response("Datos inválidos", errores)
