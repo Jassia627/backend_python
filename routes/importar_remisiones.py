@@ -74,21 +74,38 @@ async def importar_remisiones(file: UploadFile = File(...)):
                 
                 print(f"Programa académico mapeado: {programa_academico}")
                 
-                # Crear remisión psicológica
+                # Verificar y completar campos obligatorios que podrían faltar
+                nombre_estudiante = str(row["nombre_estudiante"]) if pd.notna(row.get("nombre_estudiante")) else "Estudiante sin nombre"
+                numero_documento = str(row["numero_documento"]) if pd.notna(row.get("numero_documento")) else "0000000000"
+                docente_remite = str(row["docente_remite"]) if pd.notna(row.get("docente_remite")) else "Docente por defecto"
+                correo_docente = str(row["correo_docente"]) if pd.notna(row.get("correo_docente")) else "docente@ejemplo.com"
+                telefono_docente = str(row["telefono_docente"]) if pd.notna(row.get("telefono_docente")) else "0000000000"
+                
+                # Obtener la fecha de remisión del CSV o usar la fecha actual
+                fecha_remision = None
+                if pd.notna(row.get("fecha_remision")):
+                    fecha_remision = convert_date_format(row["fecha_remision"])
+                elif pd.notna(row.get("fecha")):
+                    fecha_remision = convert_date_format(row["fecha"])
+                else:
+                    fecha_remision = datetime.now().strftime('%Y-%m-%d')
+                
+                # Crear remisión psicológica con todos los campos obligatorios
                 remision_data = {
                     "estudiante_id": estudiante_id,
-                    "nombre_estudiante": str(row["nombre_estudiante"]) if pd.notna(row.get("nombre_estudiante")) else "",
-                    "numero_documento": str(row["numero_documento"]) if pd.notna(row.get("numero_documento")) else "",
+                    "nombre_estudiante": nombre_estudiante,
+                    "numero_documento": numero_documento,
                     "programa_academico": programa_academico,
                     "semestre": str(row["semestre"]) if pd.notna(row.get("semestre")) else "1",
                     "motivo_remision": str(row["motivo_remision"]) if pd.notna(row.get("motivo_remision")) else "No especificado",
-                    "docente_remite": str(row["docente_remite"]) if pd.notna(row.get("docente_remite")) else "",
-                    "correo_docente": str(row["correo_docente"]) if pd.notna(row.get("correo_docente")) else "",
-                    "telefono_docente": str(row["telefono_docente"]) if pd.notna(row.get("telefono_docente")) else "",
+                    "docente_remite": docente_remite,
+                    "correo_docente": correo_docente,
+                    "telefono_docente": telefono_docente,
                     "fecha": convert_date_format(row["fecha"]) if pd.notna(row.get("fecha")) else datetime.now().strftime('%Y-%m-%d'),
                     "hora": str(row["hora"]) if pd.notna(row.get("hora")) else "12:00",
                     "tipo_remision": str(row["tipo_remision"]) if pd.notna(row.get("tipo_remision")) else "individual",
-                    "observaciones": str(row["observaciones"]) if pd.notna(row.get("observaciones")) else None,
+                    "fecha_remision": fecha_remision,  # Campo adicional necesario
+                    "observaciones": str(row["observaciones"]) if pd.notna(row.get("observaciones")) else "Importado desde CSV",
                     "created_at": datetime.now().isoformat(),
                     "updated_at": datetime.now().isoformat()
                 }

@@ -214,15 +214,24 @@ async def upload_csv(file: UploadFile = File(...), tipo: str = None):
                     # 4. Procesar datos de Comedor Universitario si corresponde
                     if "ComedorUniversitario_condicion_socioeconomica" in row and pd.notna(row["ComedorUniversitario_condicion_socioeconomica"]) and estudiante_id:
                         try:
+                            # Obtener datos del estudiante para completar campos obligatorios
+                            estudiante_info = supabase.table("estudiantes").select("*").eq("id", estudiante_id).execute()
+                            nombre_estudiante = ""
+                            if estudiante_info.data and len(estudiante_info.data) > 0:
+                                nombre_estudiante = f"{estudiante_info.data[0].get('nombres', '')} {estudiante_info.data[0].get('apellidos', '')}"
+                            
                             comedor_data = {
                                 "estudiante_id": estudiante_id,
                                 "condicion_socioeconomica": str(row["ComedorUniversitario_condicion_socioeconomica"]),
-                                "fecha_solicitud": convert_date_format(row["ComedorUniversitario_fecha_solicitud"]) if pd.notna(row["ComedorUniversitario_fecha_solicitud"]) else None,
-                                "aprobado": bool(row["ComedorUniversitario_aprobado"]) if pd.notna(row["ComedorUniversitario_aprobado"]) else False
+                                "fecha_solicitud": convert_date_format(row["ComedorUniversitario_fecha_solicitud"]) if pd.notna(row["ComedorUniversitario_fecha_solicitud"]) else datetime.now().strftime('%Y-%m-%d'),
+                                "aprobado": bool(row["ComedorUniversitario_aprobado"]) if pd.notna(row["ComedorUniversitario_aprobado"]) else False,
+                                "tipo_comida": "Almuerzo",  # Campo obligatorio
+                                "raciones_asignadas": 1,  # Campo obligatorio
+                                "observaciones": "Importado desde CSV"
                             }
                             
                             # Insertar en Comedor
-                            print(f"Creando registro Comedor: {comedor_data}")
+                            print(f"Creando registro Comedor con tipo_comida: {comedor_data}")
                             supabase.table("comedor_universitario").insert(comedor_data).execute()
                             print("Registro Comedor creado correctamente")
                         except Exception as e:
@@ -313,14 +322,44 @@ async def upload_csv(file: UploadFile = File(...), tipo: str = None):
                     # 8. Procesar remisiones psicológicas si corresponde
                     if "RemisionPsicologica_fecha_remision" in row and pd.notna(row["RemisionPsicologica_fecha_remision"]) and estudiante_id:
                         try:
+                            # Obtener datos del estudiante para completar campos obligatorios
+                            estudiante_info = supabase.table("estudiantes").select("*").eq("id", estudiante_id).execute()
+                            nombre_estudiante = ""
+                            numero_documento = ""
+                            programa_academico = ""
+                            semestre = "1"
+                            
+                            if estudiante_info.data and len(estudiante_info.data) > 0:
+                                nombre_estudiante = f"{estudiante_info.data[0].get('nombres', '')} {estudiante_info.data[0].get('apellidos', '')}"
+                                numero_documento = estudiante_info.data[0].get('documento', '')
+                                programa_academico = estudiante_info.data[0].get('programa_academico', '')
+                                semestre = str(estudiante_info.data[0].get('semestre', '1'))
+                            else:
+                                # Si no se encuentra el estudiante, usar datos del CSV
+                                nombre_estudiante = f"Estudiante {row['estudiante_numero_documento']}" if pd.notna(row.get('estudiante_numero_documento')) else "Estudiante sin nombre"
+                                numero_documento = str(row['estudiante_numero_documento']) if pd.notna(row.get('estudiante_numero_documento')) else "0000000000"
+                                programa_academico = str(row['estudiante_programa_academico']) if pd.notna(row.get('estudiante_programa_academico')) else "No especificado"
+                                semestre = str(row['estudiante_semestre']) if pd.notna(row.get('estudiante_semestre')) else "1"
+                            
                             remision_psico_data = {
                                 "estudiante_id": estudiante_id,
-                                "fecha_remision": convert_date_format(row["RemisionPsicologica_fecha_remision"]),
-                                "tipo_remision": str(row["RemisionPsicologica_tipo_remision"]) if pd.notna(row["RemisionPsicologica_tipo_remision"]) else "general"
+                                "nombre_estudiante": nombre_estudiante,
+                                "numero_documento": numero_documento,
+                                "programa_academico": programa_academico,
+                                "semestre": semestre,
+                                "motivo_remision": "Importado desde CSV",  # Campo obligatorio
+                                "docente_remite": "Docente CSV",  # Campo obligatorio
+                                "correo_docente": "docente_csv@ejemplo.com",  # Campo obligatorio
+                                "telefono_docente": "0000000000",  # Campo obligatorio
+                                "fecha": convert_date_format(row["RemisionPsicologica_fecha_remision"]) or datetime.now().strftime('%Y-%m-%d'),  # Campo obligatorio
+                                "hora": "12:00",  # Campo obligatorio
+                                "tipo_remision": str(row["RemisionPsicologica_tipo_remision"]) if pd.notna(row["RemisionPsicologica_tipo_remision"]) else "individual",  # Campo obligatorio
+                                "fecha_remision": convert_date_format(row["RemisionPsicologica_fecha_remision"]) or datetime.now().strftime('%Y-%m-%d'),
+                                "observaciones": "Importado automáticamente desde CSV"
                             }
                             
                             # Insertar la remisión psicológica
-                            print(f"Creando remisión psicológica: {remision_psico_data}")
+                            print(f"Creando remisión psicológica con todos los campos obligatorios: {remision_psico_data}")
                             supabase.table("remisiones_psicologicas").insert(remision_psico_data).execute()
                             print("Remisión psicológica creada correctamente")
                         except Exception as e:
