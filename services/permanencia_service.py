@@ -213,38 +213,68 @@ class PermanenciaService:
         Returns:
             Registro de comedor creado
         """
-        # Extraer datos del estudiante
-        datos_estudiante = {
-            "documento": comedor_data.get("numero_documento"),
-            "tipo_documento": comedor_data.get("tipo_documento"),
-            "nombres": comedor_data.get("nombres"),
-            "apellidos": comedor_data.get("apellidos"),
-            "correo": comedor_data.get("correo"),
-            "telefono": comedor_data.get("telefono"),
-            "direccion": comedor_data.get("direccion"),
-            "programa_academico": comedor_data.get("programa_academico"),
-            "semestre": comedor_data.get("semestre"),
-            "estrato": comedor_data.get("estrato")
-        }
-        
-        # Buscar o crear estudiante
-        estudiante_id = self.estudiantes_data.buscar_o_crear(datos_estudiante)
-        
-        # Crear registro de comedor universitario
-        comedor = {
-            "estudiante_id": estudiante_id,
-            "condicion_socioeconomica": comedor_data.get("condicion_socioeconomica"),
-            "fecha_solicitud": comedor_data.get("fecha_solicitud"),
-            "aprobado": comedor_data.get("aprobado", False),
-            "tipo_comida": comedor_data.get("tipo_comida"),
-            "raciones_asignadas": comedor_data.get("raciones_asignadas"),
-            "observaciones": comedor_data.get("observaciones") or ""
-        }
-        
-        result = self.comedores_data.create(comedor)
-        result["estudiante"] = datos_estudiante
-        
-        return result
+        try:
+            print(f"Procesando datos para comedor universitario: {comedor_data}")
+            
+            # Normalizar campos: si existen las versiones con sufijo '1', usarlas como versiones normales
+            if "numero_documento1" in comedor_data and "numero_documento" not in comedor_data:
+                comedor_data["numero_documento"] = comedor_data["numero_documento1"]
+                print(f"Normalizado numero_documento1 a numero_documento: {comedor_data['numero_documento']}")
+            
+            if "correo1" in comedor_data and "correo" not in comedor_data:
+                comedor_data["correo"] = comedor_data["correo1"]
+                print(f"Normalizado correo1 a correo: {comedor_data['correo']}")
+                
+            # Extraer datos del estudiante
+            datos_estudiante = {
+                "documento": comedor_data.get("numero_documento"),
+                "tipo_documento": comedor_data.get("tipo_documento"),
+                "nombres": comedor_data.get("nombres"),
+                "apellidos": comedor_data.get("apellidos"),
+                "correo": comedor_data.get("correo"),
+                "telefono": comedor_data.get("telefono"),
+                "direccion": comedor_data.get("direccion"),
+                "programa_academico": comedor_data.get("programa_academico"),
+                "semestre": comedor_data.get("semestre"),
+                "estrato": comedor_data.get("estrato"),
+                "riesgo_desercion": comedor_data.get("riesgo_desercion")
+            }
+            
+            print(f"Datos de estudiante extraídos: {datos_estudiante}")
+            
+            # Buscar o crear estudiante
+            estudiante_id = self.estudiantes_data.buscar_o_crear(datos_estudiante)
+            print(f"ID de estudiante obtenido: {estudiante_id}")
+            
+            # Crear registro de comedor universitario
+            comedor = {
+                "estudiante_id": estudiante_id,
+                "condicion_socioeconomica": comedor_data.get("condicion_socioeconomica"),
+                "fecha_solicitud": comedor_data.get("fecha_solicitud"),
+                "aprobado": comedor_data.get("aprobado", False),
+                "tipo_comida": comedor_data.get("tipo_comida", "Almuerzo"),  # Valor por defecto
+                "raciones_asignadas": comedor_data.get("raciones_asignadas", 1),  # Valor por defecto
+                "observaciones": comedor_data.get("observaciones") or "",
+                "tipo_subsidio": comedor_data.get("tipo_subsidio"),
+                "periodo_academico": comedor_data.get("periodo_academico"),
+                "estrato": comedor_data.get("estrato") or datos_estudiante.get("estrato")
+            }
+            
+            print(f"Datos de comedor a insertar: {comedor}")
+            
+            # Intentar crear el registro
+            try:
+                result = self.comedores_data.create(comedor)
+                print(f"Resultado de la creación: {result}")
+                result["estudiante"] = datos_estudiante
+                return result
+            except Exception as e:
+                print(f"Error al insertar en comedores_universitarios: {str(e)}")
+                raise Exception(f"Error al insertar en comedores_universitarios: {str(e)}")
+                
+        except Exception as e:
+            print(f"Error en create_comedor: {str(e)}")
+            raise Exception(f"Error en create_comedor: {str(e)}")
     
     # Métodos para Apoyos Socioeconómicos
     
@@ -267,6 +297,13 @@ class PermanenciaService:
         Returns:
             Apoyo creado
         """
+        # Normalizar campos: si existen las versiones con sufijo '1', usarlas como versiones normales
+        if "numero_documento1" in apoyo_data and "numero_documento" not in apoyo_data:
+            apoyo_data["numero_documento"] = apoyo_data["numero_documento1"]
+        
+        if "correo1" in apoyo_data and "correo" not in apoyo_data:
+            apoyo_data["correo"] = apoyo_data["correo1"]
+            
         # Extraer datos del estudiante
         datos_estudiante = {
             "documento": apoyo_data.get("numero_documento"),
@@ -317,6 +354,13 @@ class PermanenciaService:
         Returns:
             Taller creado
         """
+        # Normalizar campos: si existen las versiones con sufijo '1', usarlas como versiones normales
+        if "numero_documento1" in taller_data and "numero_documento" not in taller_data:
+            taller_data["numero_documento"] = taller_data["numero_documento1"]
+        
+        if "correo1" in taller_data and "correo" not in taller_data:
+            taller_data["correo"] = taller_data["correo1"]
+            
         # Extraer datos del estudiante
         datos_estudiante = {
             "documento": taller_data.get("numero_documento"),
@@ -368,6 +412,13 @@ class PermanenciaService:
         Returns:
             Seguimiento creado
         """
+        # Normalizar campos: si existen las versiones con sufijo '1', usarlas como versiones normales
+        if "numero_documento1" in seguimiento_data and "numero_documento" not in seguimiento_data:
+            seguimiento_data["numero_documento"] = seguimiento_data["numero_documento1"]
+        
+        if "correo1" in seguimiento_data and "correo" not in seguimiento_data:
+            seguimiento_data["correo"] = seguimiento_data["correo1"]
+            
         # Extraer datos del estudiante
         datos_estudiante = {
             "documento": seguimiento_data.get("numero_documento"),

@@ -775,6 +775,8 @@ async def create_intervencion_grupal(datos: Dict[str, Any]):
     """Crea una nueva intervención grupal."""
     try:
         import re
+        from config import supabase
+        from datetime import datetime
 
         # Campos requeridos
         campos_requeridos = [

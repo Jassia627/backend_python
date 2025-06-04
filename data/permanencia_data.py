@@ -7,6 +7,44 @@ import os
 # Importar la configuración existente
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import supabase
+from utils.safe_formatting import safe_str, safe_int, safe_bool, safe_float
+
+# Helper function to format student data
+def _format_estudiante_data(estudiante_raw: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Formatea los datos del estudiante asegurando que todos los valores sean primitivos.
+    """
+    if not estudiante_raw or not isinstance(estudiante_raw, dict):
+        return {
+            "nombres": "N/A",
+            "apellidos": "N/A",
+            "correo1": "N/A",
+            "numero_documento1": "N/A",
+            "tipo_documento": "N/A",
+            "telefono": "N/A",
+            "direccion": "N/A",
+            "programa_academico": "N/A",
+            "semestre": "N/A",
+            "estrato": "N/A",
+            "riesgo_desercion": "N/A"
+        }
+    
+    # Ensure all values are strings or primitive types to avoid React rendering issues
+    formatted_student = {
+        "nombres": safe_str(estudiante_raw.get("nombres")),
+        "apellidos": safe_str(estudiante_raw.get("apellidos")),
+        "correo1": safe_str(estudiante_raw.get("correo")),
+        "numero_documento1": safe_str(estudiante_raw.get("documento")),
+        "tipo_documento": safe_str(estudiante_raw.get("tipo_documento")),
+        "telefono": safe_str(estudiante_raw.get("telefono")),
+        "direccion": safe_str(estudiante_raw.get("direccion")),
+        "programa_academico": safe_str(estudiante_raw.get("programa_academico")),
+        "semestre": safe_str(estudiante_raw.get("semestre")),
+        "estrato": safe_str(estudiante_raw.get("estrato")),
+        "riesgo_desercion": safe_str(estudiante_raw.get("riesgo_desercion"))
+    }
+    return formatted_student
+
 
 class TutoriasAcademicasData(BaseData):
     """Clase para el acceso a datos de tutorías académicas."""
@@ -20,10 +58,36 @@ class TutoriasAcademicasData(BaseData):
         Obtiene todas las tutorías académicas con datos del estudiante.
         
         Returns:
-            Lista de tutorías académicas con datos del estudiante
+            Lista de tutorías académicas con datos del estudiante, formateada para el frontend.
         """
-        response = supabase.table(self.table_name).select("*, estudiantes(*)").execute()
-        return response.data
+        try:
+            response = supabase.table(self.table_name).select("*, estudiantes(*)").execute()
+            formatted_data = []
+            if response.data:
+                for item in response.data:
+                    if not isinstance(item, dict):
+                        continue
+                        
+                    estudiante_raw = item.pop('estudiantes', None)
+                    _estudiante_data_for_top_level = estudiante_raw if isinstance(estudiante_raw, dict) else {}
+                    formatted_item = {
+                        "id": safe_str(item.get('id')),
+                        "estudiante_id": safe_str(item.get('estudiante_id')),
+                        "nivel_riesgo": safe_str(item.get('nivel_riesgo')),
+                        "requiere_tutoria": safe_bool(item.get('requiere_tutoria')),
+                        "fecha_asignacion": safe_str(item.get('fecha_asignacion')),
+                        "acciones_apoyo": safe_str(item.get('acciones_apoyo'), ''),
+                        "created_at": safe_str(item.get('created_at')),
+                        "updated_at": safe_str(item.get('updated_at')),
+                        "estudiante": _format_estudiante_data(estudiante_raw),
+                        "riesgo": safe_str(_estudiante_data_for_top_level.get('riesgo_desercion')),
+                        "fecha": safe_str(item.get('fecha_tutoria'))
+                    }
+                    formatted_data.append(formatted_item)
+            return formatted_data
+        except Exception as e:
+            print(f"Error al obtener registros de tutorías académicas con estudiante: {str(e)}")
+            return []
     
     def get_by_estudiante(self, estudiante_id: str) -> List[Dict[str, Any]]:
         """
@@ -50,10 +114,26 @@ class AsesoriasPsicologicasData(BaseData):
         Obtiene todas las asesorías psicológicas con datos del estudiante.
         
         Returns:
-            Lista de asesorías psicológicas con datos del estudiante
+            Lista de asesorías psicológicas con datos del estudiante, formateada para el frontend.
         """
-        response = supabase.table(self.table_name).select("*, estudiantes(*)").execute()
-        return response.data
+        try:
+            response = supabase.table(self.table_name).select("*, estudiantes(*)").execute()
+            formatted_data = []
+            if response.data:
+                for item in response.data:
+                    estudiante_raw = item.pop('estudiantes', None)
+                    _estudiante_data_for_top_level = estudiante_raw if isinstance(estudiante_raw, dict) else {}
+                    formatted_item = {
+                        **item,
+                        'estudiante': _format_estudiante_data(estudiante_raw),
+                        'riesgo': _estudiante_data_for_top_level.get('riesgo_desercion', 'N/A'),
+                        'fecha': item.get('fecha_asesoria', 'N/A') # Specific date field
+                    }
+                    formatted_data.append(formatted_item)
+            return formatted_data
+        except Exception as e:
+            print(f"Error al obtener registros de asesorías psicológicas con estudiante: {str(e)}")
+            return []
     
     def get_by_estudiante(self, estudiante_id: str) -> List[Dict[str, Any]]:
         """
@@ -80,10 +160,26 @@ class OrientacionesVocacionalesData(BaseData):
         Obtiene todas las orientaciones vocacionales con datos del estudiante.
         
         Returns:
-            Lista de orientaciones vocacionales con datos del estudiante
+            Lista de orientaciones vocacionales con datos del estudiante, formateada para el frontend.
         """
-        response = supabase.table(self.table_name).select("*, estudiantes(*)").execute()
-        return response.data
+        try:
+            response = supabase.table(self.table_name).select("*, estudiantes(*)").execute()
+            formatted_data = []
+            if response.data:
+                for item in response.data:
+                    estudiante_raw = item.pop('estudiantes', None)
+                    _estudiante_data_for_top_level = estudiante_raw if isinstance(estudiante_raw, dict) else {}
+                    formatted_item = {
+                        **item,
+                        'estudiante': _format_estudiante_data(estudiante_raw),
+                        'riesgo': _estudiante_data_for_top_level.get('riesgo_desercion', 'N/A'),
+                        'fecha': item.get('fecha_orientacion', 'N/A') # Specific date field
+                    }
+                    formatted_data.append(formatted_item)
+            return formatted_data
+        except Exception as e:
+            print(f"Error al obtener registros de orientaciones vocacionales con estudiante: {str(e)}")
+            return []
     
     def get_by_estudiante(self, estudiante_id: str) -> List[Dict[str, Any]]:
         """
@@ -103,17 +199,50 @@ class ComedoresUniversitariosData(BaseData):
     
     def __init__(self):
         """Inicializa el acceso a datos para la tabla de comedores universitarios."""
-        super().__init__("comedores_universitarios")
+        super().__init__("comedor_universitario")
     
     def get_with_estudiante(self) -> List[Dict[str, Any]]:
         """
         Obtiene todos los registros de comedor universitario con datos del estudiante.
         
         Returns:
-            Lista de registros de comedor universitario con datos del estudiante
+            Lista de registros de comedor universitario con datos del estudiante, formateada para el frontend.
         """
-        response = supabase.table(self.table_name).select("*, estudiantes(*)").execute()
-        return response.data
+        try:
+            response = supabase.table(self.table_name).select("*, estudiantes(*)").execute()
+            formatted_data = []
+            if response.data:
+                for item in response.data:
+                    if not isinstance(item, dict):
+                        continue
+                        
+                    estudiante_raw = item.pop('estudiantes', None)
+                    _estudiante_data_for_top_level = estudiante_raw if isinstance(estudiante_raw, dict) else {}
+                    
+                    # Ensure all values are properly formatted and serializable
+                    formatted_item = {
+                        "id": safe_str(item.get('id')),
+                        "estudiante_id": safe_str(item.get('estudiante_id')),
+                        "condicion_socioeconomica": safe_str(item.get('condicion_socioeconomica')),
+                        "fecha_solicitud": safe_str(item.get('fecha_solicitud')),
+                        "aprobado": safe_bool(item.get('aprobado')),
+                        "tipo_comida": safe_str(item.get('tipo_comida'), 'Almuerzo'),
+                        "raciones_asignadas": safe_int(item.get('raciones_asignadas'), 1),
+                        "observaciones": safe_str(item.get('observaciones'), ''),
+                        "tipo_subsidio": safe_str(item.get('tipo_subsidio'), ''),
+                        "periodo_academico": safe_str(item.get('periodo_academico'), ''),
+                        "estrato": safe_int(item.get('estrato'), 1),
+                        "created_at": safe_str(item.get('created_at')),
+                        "updated_at": safe_str(item.get('updated_at')),
+                        "estudiante": _format_estudiante_data(estudiante_raw),
+                        "riesgo": safe_str(_estudiante_data_for_top_level.get('riesgo_desercion')),
+                        "fecha": safe_str(item.get('fecha_solicitud'))
+                    }
+                    formatted_data.append(formatted_item)
+            return formatted_data
+        except Exception as e:
+            print(f"Error al obtener registros de comedor universitario con estudiante: {str(e)}")
+            return []
     
     def get_by_estudiante(self, estudiante_id: str) -> List[Dict[str, Any]]:
         """
@@ -140,10 +269,26 @@ class ApoyosSocioeconomicosData(BaseData):
         Obtiene todos los apoyos socioeconómicos con datos del estudiante.
         
         Returns:
-            Lista de apoyos socioeconómicos con datos del estudiante
+            Lista de apoyos socioeconómicos con datos del estudiante, formateada para el frontend.
         """
-        response = supabase.table(self.table_name).select("*, estudiantes(*)").execute()
-        return response.data
+        try:
+            response = supabase.table(self.table_name).select("*, estudiantes(*)").execute()
+            formatted_data = []
+            if response.data:
+                for item in response.data:
+                    estudiante_raw = item.pop('estudiantes', None)
+                    _estudiante_data_for_top_level = estudiante_raw if isinstance(estudiante_raw, dict) else {}
+                    formatted_item = {
+                        **item, 
+                        'estudiante': _format_estudiante_data(estudiante_raw),
+                        'riesgo': _estudiante_data_for_top_level.get('riesgo_desercion', 'N/A'),
+                        'fecha': item.get('fecha_solicitud', 'N/A') # Specific date field
+                    }
+                    formatted_data.append(formatted_item)
+            return formatted_data
+        except Exception as e:
+            print(f"Error al obtener registros de apoyos socioeconómicos con estudiante: {str(e)}")
+            return []
     
     def get_by_estudiante(self, estudiante_id: str) -> List[Dict[str, Any]]:
         """
@@ -170,10 +315,26 @@ class TalleresHabilidadesData(BaseData):
         Obtiene todos los talleres de habilidades con datos del estudiante.
         
         Returns:
-            Lista de talleres de habilidades con datos del estudiante
+            Lista de talleres de habilidades con datos del estudiante, formateada para el frontend.
         """
-        response = supabase.table(self.table_name).select("*, estudiantes(*)").execute()
-        return response.data
+        try:
+            response = supabase.table(self.table_name).select("*, estudiantes(*)").execute()
+            formatted_data = []
+            if response.data:
+                for item in response.data:
+                    estudiante_raw = item.pop('estudiantes', None)
+                    _estudiante_data_for_top_level = estudiante_raw if isinstance(estudiante_raw, dict) else {}
+                    formatted_item = {
+                        **item, 
+                        'estudiante': _format_estudiante_data(estudiante_raw),
+                        'riesgo': _estudiante_data_for_top_level.get('riesgo_desercion', 'N/A'),
+                        'fecha': item.get('fecha_realizacion', 'N/A') # Specific date field
+                    }
+                    formatted_data.append(formatted_item)
+            return formatted_data
+        except Exception as e:
+            print(f"Error al obtener registros de talleres de habilidades con estudiante: {str(e)}")
+            return []
     
     def get_by_estudiante(self, estudiante_id: str) -> List[Dict[str, Any]]:
         """
@@ -200,10 +361,26 @@ class SeguimientosAcademicosData(BaseData):
         Obtiene todos los seguimientos académicos con datos del estudiante.
         
         Returns:
-            Lista de seguimientos académicos con datos del estudiante
+            Lista de seguimientos académicos con datos del estudiante, formateada para el frontend.
         """
-        response = supabase.table(self.table_name).select("*, estudiantes(*)").execute()
-        return response.data
+        try:
+            response = supabase.table(self.table_name).select("*, estudiantes(*)").execute()
+            formatted_data = []
+            if response.data:
+                for item in response.data:
+                    estudiante_raw = item.pop('estudiantes', None)
+                    _estudiante_data_for_top_level = estudiante_raw if isinstance(estudiante_raw, dict) else {}
+                    formatted_item = {
+                        **item, 
+                        'estudiante': _format_estudiante_data(estudiante_raw),
+                        'riesgo': _estudiante_data_for_top_level.get('riesgo_desercion', 'N/A'),
+                        'fecha': item.get('fecha_seguimiento', 'N/A') # Specific date field
+                    }
+                    formatted_data.append(formatted_item)
+            return formatted_data
+        except Exception as e:
+            print(f"Error al obtener registros de seguimientos académicos con estudiante: {str(e)}")
+            return []
     
     def get_by_estudiante(self, estudiante_id: str) -> List[Dict[str, Any]]:
         """

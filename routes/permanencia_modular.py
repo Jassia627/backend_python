@@ -205,15 +205,75 @@ async def create_comedor_universitario(datos: Dict[str, Any]):
     try:
         print(f"Recibiendo datos de comedor universitario: {datos}")
         
-        errores = fv.validar_comedor_universitario(datos)
-        if errores:
-            return error_response("Datos inválidos", errores)
+        # Preprocesamiento de datos para asegurar compatibilidad
+        # Convertir semestre a entero si es posible
+        if "semestre" in datos and datos["semestre"] and not isinstance(datos["semestre"], int):
+            try:
+                datos["semestre"] = int(datos["semestre"])
+            except (ValueError, TypeError):
+                datos["semestre"] = 1
+                print(f"Semestre convertido a valor por defecto: {datos['semestre']}")
+        elif "semestre" not in datos or not datos.get("semestre"):
+            datos["semestre"] = 1
+            print(f"Semestre establecido a valor por defecto: {datos['semestre']}")
+        
+        # Convertir estrato a entero si es posible
+        if "estrato" in datos and datos["estrato"] and not isinstance(datos["estrato"], int):
+            try:
+                datos["estrato"] = int(datos["estrato"])
+            except (ValueError, TypeError):
+                datos["estrato"] = 1
+                print(f"Estrato convertido a valor por defecto: {datos['estrato']}")
+        elif "estrato" not in datos or not datos.get("estrato"):
+            datos["estrato"] = 1
+            print(f"Estrato establecido a valor por defecto: {datos['estrato']}")
+        
+        # Establecer valores por defecto para campos obligatorios
+        if "riesgo_desercion" not in datos or not datos.get("riesgo_desercion"):
+            datos["riesgo_desercion"] = "Bajo"
+            print(f"Riesgo deserción establecido a valor por defecto: {datos['riesgo_desercion']}")
+            
+        if "fecha_solicitud" not in datos or not datos.get("fecha_solicitud"):
+            from datetime import datetime
+            datos["fecha_solicitud"] = datetime.now().strftime('%Y-%m-%d')
+            print(f"Fecha solicitud establecida a valor por defecto: {datos['fecha_solicitud']}")
+            
+        if "tipo_comida" not in datos or not datos.get("tipo_comida"):
+            datos["tipo_comida"] = "Almuerzo"
+            print(f"Tipo comida establecido a valor por defecto: {datos['tipo_comida']}")
+            
+        if "raciones_asignadas" not in datos or not datos.get("raciones_asignadas"):
+            datos["raciones_asignadas"] = 1
+            print(f"Raciones asignadas establecido a valor por defecto: {datos['raciones_asignadas']}")
+            
+        if "aprobado" not in datos:
+            datos["aprobado"] = False
+            print(f"Aprobado establecido a valor por defecto: {datos['aprobado']}")
+        
+        # Validación flexible - solo validamos si hay errores críticos
+        errores_criticos = {}
+        if not datos.get("numero_documento"):
+            errores_criticos["numero_documento"] = "El número de documento es obligatorio"
+        if not datos.get("nombres"):
+            errores_criticos["nombres"] = "El nombre es obligatorio"
+        if not datos.get("apellidos"):
+            errores_criticos["apellidos"] = "Los apellidos son obligatorios"
+        if not datos.get("correo"):
+            errores_criticos["correo"] = "El correo es obligatorio"
+        if not datos.get("programa_academico"):
+            errores_criticos["programa_academico"] = "El programa académico es obligatorio"
+        if not datos.get("condicion_socioeconomica"):
+            errores_criticos["condicion_socioeconomica"] = "La condición socioeconómica es obligatoria"
+            
+        if errores_criticos:
+            return error_response("Faltan datos obligatorios", errores_criticos)
         
         # Crear registro de comedor
         result = service.create_comedor(datos)
         
         return success_response(result, "Registro de comedor universitario creado exitosamente")
     except Exception as e:
+        print(f"Error detallado al crear comedor universitario: {str(e)}")
         return handle_exception(e, "crear registro de comedor universitario")
 
 # Endpoints para Apoyos Socioeconómicos

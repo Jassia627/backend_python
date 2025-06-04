@@ -45,22 +45,34 @@ class BaseData:
     
     def create(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Crea un nuevo registro.
+        Crea un nuevo registro en la tabla.
         
         Args:
-            data: Datos del registro
+            data: Datos del nuevo registro
             
         Returns:
-            Registro creado
+            El registro creado
         """
-        # Añadir timestamps
-        if "created_at" not in data:
-            data["created_at"] = datetime.now().isoformat()
-        if "updated_at" not in data:
-            data["updated_at"] = datetime.now().isoformat()
+        try:
+            response = supabase.table(self.table_name).insert(data).execute()
             
-        response = supabase.table(self.table_name).insert(data).execute()
-        return response.data[0] if response.data else {}
+            # Verificar si la respuesta tiene datos
+            if hasattr(response, 'data') and response.data:
+                return response.data[0]
+            
+            # Si no hay datos pero tampoco hay error explícito
+            error_msg = "No se recibió respuesta de la base de datos"
+            if hasattr(response, 'error') and response.error:
+                error_msg = str(response.error)
+            elif hasattr(response, 'status_code') and response.status_code >= 400:
+                error_msg = f"Error HTTP {response.status_code}"
+            
+            print(f"Error en create: {error_msg}")
+            raise Exception(error_msg)
+            
+        except Exception as e:
+            print(f"Error en método create de {self.table_name}: {str(e)}")
+            raise
     
     def update(self, id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """
